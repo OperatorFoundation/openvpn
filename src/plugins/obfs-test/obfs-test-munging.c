@@ -1,12 +1,19 @@
 #include <string.h>
 #include <errno.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
 #include <stdbool.h>
 #include "obfs-test.h"
+#ifdef OPENVPN_VSOCKET_PLATFORM_POSIX
+#include <sys/socket.h>
+#include <netinet/in.h>
+typedef in_port_t obfs_test_in_port_t;
+#else
+#include <winsock2.h>
+#include <ws2tcpip.h>
+typedef u_short obfs_test_in_port_t;
+#endif
 
-static in_port_t
-munge_port(in_port_t port)
+static obfs_test_in_port_t
+munge_port(obfs_test_in_port_t port)
 {
     return port ^ 15;
 }

@@ -1,16 +1,29 @@
 #include "obfs-test.h"
 /* TODO: should probably conditionalize at Automake time instead */
-#ifdef OPENVPN_VSOCKET_PLATFORM_WINDOWS
+#ifdef OPENVPN_VSOCKET_PLATFORM_WIN32
 #include <stdbool.h>
-#include <err.h>
 #include <string.h>
+#include <stdio.h>
+#include <stdarg.h>
 #include <windows.h>
 #include <winsock2.h>
+#include <assert.h>
+
+/* FIXME: general error reporting back to core / use logging callbacks */
+static void
+warnx(const char *fmt, ...)
+{
+    va_list va;
+    va_start(va, fmt);
+    vfprintf(stderr, fmt, va);
+    putc('\n', stderr);
+    va_end(va);
+}
 
 static inline bool
 is_invalid_handle(HANDLE h)
 {
-    return h == NULL || h == INVALID_HANDLE;
+    return h == NULL || h == INVALID_HANDLE_VALUE;
 }
 
 typedef enum {
@@ -44,6 +57,7 @@ setup_io_slot(struct io_slot *slot, SOCKET socket, HANDLE event)
     slot->addr_cap = sizeof(SOCKADDR_STORAGE);
     slot->socket = socket;
     slot->overlapped.hEvent = event;
+    return true;
 }
 
 /* Note that this assumes any I/O has already been implicitly canceled (via closesocket),
@@ -56,12 +70,15 @@ destroy_io_slot(struct io_slot *slot)
         DWORD bytes, flags;
         BOOL ok = WSAGetOverlappedResult(slot->socket, &slot->overlapped, &bytes,
                                          TRUE /* wait */, &flags);
-        if (!ok)
+        if (!ok && WSAGetLastError() == WSA_IO_INCOMPLETE)
         {
-            warnx("obfs-test: destroying I/O slot: canceled operation failed?!");
+            warnx("obfs-test: destroying I/O slot: canceled operation is still incomplete after wait?!");
             return false;
         }
     }
+
+    slot->status = IO_SLOT_DORMANT;
+    return true;
 }
 
 /* FIXME: aborts on error. */
@@ -91,7 +108,7 @@ struct obfs_test_socket_win32
         HANDLE read;
         HANDLE write;
     } completion_events;
-    struct io_slot slot_read, slot_wriet;
+    struct io_slot slot_read, slot_write;
 
     int last_rwflags;
 };
@@ -180,6 +197,7 @@ obfs_test_win32_bind(const struct sockaddr *addr, openvpn_vsocket_socklen_t len)
     return &sock->handle;
 
 error:
+    warnx("obfs-test: bind failure: WSA error = %d", WSAGetLastError());
     free_socket(sock);
     free(addr_rev);
     return NULL;
@@ -194,7 +212,7 @@ handle_sendrecv_return(struct io_slot *slot, int status)
         slot->status = IO_SLOT_COMPLETE;
         slot->succeeded = true;
         slot->buf_len = slot->bytes;
-        ASSERT(SetEvent(slot->overlapped.hEvent));
+        SetEvent(slot->overlapped.hEvent);
     }
     else if (WSAGetLastError() == WSA_IO_PENDING)
     {
@@ -218,7 +236,7 @@ queue_new_read(struct io_slot *slot, size_t cap)
     WSABUF sbuf;
     assert(slot->status == IO_SLOT_DORMANT);
 
-    ASSERT(ResetEvent(slot->overlapped.hEvent));
+    ResetEvent(slot->overlapped.hEvent);
     resize_io_buf(slot, cap);
     sbuf.buf = slot->buf;
     sbuf.len = slot->buf_cap;
@@ -238,7 +256,7 @@ queue_new_write(struct io_slot *slot)
     WSABUF sbuf;
     assert(slot->status == IO_SLOT_COMPLETE || slot->status == IO_SLOT_DORMANT);
 
-    ASSERT(ResetEvent(slot->overlapped.hEvent));
+    ResetEvent(slot->overlapped.hEvent);
     sbuf.buf = slot->buf;
     sbuf.len = slot->buf_len;
     slot->flags = 0;
@@ -258,7 +276,7 @@ ensure_pending_read(struct obfs_test_socket_win32 *sock)
             return;
         case IO_SLOT_COMPLETE:
             /* Set the event manually here just in case. */
-            ASSERT(SetEvent(slot->overlapped.hEvent));
+            SetEvent(slot->overlapped.hEvent);
             return;
 
         case IO_SLOT_DORMANT:
@@ -320,8 +338,9 @@ static bool
 complete_pending_read(struct obfs_test_socket_win32 *sock)
 {
     bool done = complete_pending_operation(&sock->slot_read);
+    /* TODO: do we still need this? */
     if (done)
-        ASSERT(ResetEvent(sock->completion_events.read));
+        ResetEvent(sock->completion_events.read);
     return done;
 }
 
@@ -332,14 +351,16 @@ consumed_pending_read(struct obfs_test_socket_win32 *sock)
     assert(slot->status == IO_SLOT_COMPLETE);
     slot->status = IO_SLOT_DORMANT;
     slot->succeeded = false;
+    ResetEvent(slot->overlapped.hEvent);
 }
 
 static inline bool
 complete_pending_write(struct obfs_test_socket_win32 *sock)
 {
     bool done = complete_pending_operation(&sock->slot_write);
+    /* TODO: do we still need this? */
     if (done)
-        ASSERT(SetEvent(sock->completion_events.write));
+        SetEvent(sock->completion_events.write);
     return done;
 }
 
@@ -371,7 +392,7 @@ obfs_test_win32_update_event(openvpn_vsocket_handle_t handle, void *arg, unsigne
 }
 
 static unsigned
-obfs_test_win32_pump(openvpn_socket_handle_t handle)
+obfs_test_win32_pump(openvpn_vsocket_handle_t handle)
 {
     struct obfs_test_socket_win32 *sock = (struct obfs_test_socket_win32 *)handle;
     unsigned result = 0;
@@ -423,9 +444,9 @@ obfs_test_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
 
     /* TODO: what to do if not enough space? Currently truncates. */
     openvpn_vsocket_socklen_t addr_copy_len = *addrlen;
-    if (sock->read_slot.addr_len < addr_copy_len)
-        addr_copy_len = sock->read_slot.addr_len;
-    memcpy(addr, sock->slot_read.addr, addr_copy_len);
+    if (sock->slot_read.addr_len < addr_copy_len)
+        addr_copy_len = sock->slot_read.addr_len;
+    memcpy(addr, &sock->slot_read.addr, addr_copy_len);
     *addrlen = addr_copy_len;
     if (addr_copy_len > 0)
         obfs_test_munge_addr(addr, addr_copy_len);
@@ -435,9 +456,9 @@ obfs_test_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
     return copy_len;
 }
 
-static size_t
+static ssize_t
 obfs_test_win32_sendto(openvpn_vsocket_handle_t handle, const void *buf, size_t len,
-                       const struct sockaddr *addr, socklen_t addrlen)
+                       const struct sockaddr *addr, openvpn_vsocket_socklen_t addrlen)
 {
     struct obfs_test_socket_win32 *sock = (struct obfs_test_socket_win32 *)handle;
     complete_pending_write(sock);
@@ -477,7 +498,8 @@ obfs_test_win32_sendto(openvpn_vsocket_handle_t handle, const void *buf, size_t 
 
         case IO_SLOT_COMPLETE:
             if (sock->slot_write.succeeded)
-                return slot->buf_len;
+                /* TODO: more partial length handling */
+                return len;
             else
                 return -1;
 
@@ -491,6 +513,8 @@ obfs_test_win32_close(openvpn_vsocket_handle_t handle)
 {
     free_socket((struct obfs_test_socket_win32 *) handle);
 }
+
+struct openvpn_vsocket_vtab obfs_test_socket_vtab;
 
 void
 obfs_test_initialize_socket_vtab(void)
