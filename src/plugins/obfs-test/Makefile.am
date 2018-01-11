@@ -11,6 +11,8 @@ endif
 
 openvpn_plugin_obfs_test_la_SOURCES = \
 	obfs-test.c \
+	obfs-test-munging.c \
+	obfs-test-posix.c \
 	obfs-test.exports
 openvpn_plugin_obfs_test_la_LDFLAGS = $(AM_LDFLAGS) \
 	-export-symbols "$(srcdir)/obfs-test.exports" \
