@@ -1,17 +1,38 @@
 #ifndef OPENVPN_VSOCKET_H_
 #define OPENVPN_VSOCKET_H_
 
-/* PLATFORM: only POSIX-y platforms here for now */
+/* PLATFORM: only POSIX-y platforms or Win32 here */
 
+#ifdef _WIN32
+
+/* Win32 */
+#define OPENVPN_VSOCKET_PLATFORM_WIN32
+#include <windows.h>
+
+/* Must be compatible with event_t (const struct rw_handle *) */
+typedef const struct {
+    HANDLE read;
+    HANDLE write;
+} *openvpn_vsocket_native_event_t;
+
+typedef int openvpn_vsocket_socklen_t;
+
+#else
+
+/* POSIX-y */
+#define OPENVPN_VSOCKET_PLATFORM_POSIX
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/socket.h>
 
+typedef int openvpn_vsocket_native_event_t;
+typedef socklen_t openvpn_vsocket_socklen_t;
+
+#endif
+
 /* Should match internal event.h */
 #define OPENVPN_VSOCKET_EVENT_READ  0x01
 #define OPENVPN_VSOCKET_EVENT_WRITE 0x02
-
-typedef int openvpn_vsocket_native_event_t;
 
 typedef struct openvpn_vsocket_event_set_handle *openvpn_vsocket_event_set_handle_t;
 
@@ -46,15 +67,15 @@ struct openvpn_vsocket_handle {
  */
 
 struct openvpn_vsocket_vtab {
-    openvpn_vsocket_handle_t (*bind)(const struct sockaddr *addr, socklen_t len);
+    openvpn_vsocket_handle_t (*bind)(const struct sockaddr *addr, openvpn_vsocket_socklen_t len);
     void (*request_event)(openvpn_vsocket_handle_t handle,
                            openvpn_vsocket_event_set_handle_t event_set, unsigned rwflags);
     bool (*update_event)(openvpn_vsocket_handle_t handle, void *arg, unsigned rwflags);
     unsigned (*pump)(openvpn_vsocket_handle_t handle);
     ssize_t (*recvfrom)(openvpn_vsocket_handle_t handle, void *buf, size_t len,
-                        struct sockaddr *addr, socklen_t *addrlen);
+                        struct sockaddr *addr, openvpn_vsocket_socklen_t *addrlen);
     ssize_t (*sendto)(openvpn_vsocket_handle_t handle, const void *buf, size_t len,
-                      const struct sockaddr *addr, socklen_t addrlen);
+                      const struct sockaddr *addr, openvpn_vsocket_socklen_t addrlen);
     void (*close)(openvpn_vsocket_handle_t handle);
 };
 
