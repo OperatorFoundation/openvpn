@@ -3592,6 +3592,12 @@ link_socket_write_udp_posix_sendmsg(struct link_socket *sock,
 int
 socket_recv_queue(struct link_socket *sock, int maxsize)
 {
+    if (proto_is_indirect(sock->info.proto))
+    {
+        /* Indirect handler will take care of this, so do nothing. */
+        return IOSTATE_QUEUED;
+    }
+
     if (sock->reads.iostate == IOSTATE_INITIAL)
     {
         WSABUF wsabuf[1];
