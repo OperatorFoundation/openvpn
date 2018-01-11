@@ -66,6 +66,8 @@ struct openvpn_vsocket_handle {
      - recvfrom/sendto should normally only be called after pump returns corresponding rwflags
  */
 
+/* TODO: document or coalesce error behavior between platforms (currently uses platform-native errors only) */
+
 struct openvpn_vsocket_vtab {
     openvpn_vsocket_handle_t (*bind)(const struct sockaddr *addr, openvpn_vsocket_socklen_t len);
     void (*request_event)(openvpn_vsocket_handle_t handle,

@@ -46,7 +46,10 @@ obfs_test_posix_bind(const struct sockaddr *addr, socklen_t len)
     if (!sock)
         goto error;
     sock->handle.vtab = &obfs_test_socket_vtab;
+    /* Note that sock->fd isn't -1 yet. Set it explicitly if there are ever any
+       error exits before the socket() call. */
 
+    /* FIXME: should take family from bind address */
     sock->fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (sock->fd == -1)
         goto error;
@@ -83,6 +86,7 @@ obfs_test_posix_update_event(openvpn_vsocket_handle_t handle, void *arg, unsigne
     warnx("obfs-test: update-event: %p, %p, %d", handle, arg, rwflags);
     if (arg != handle)
         return false;
+    /* TODO(low): do we need to handle what happens if core starts splitting up events here? */
     ((struct obfs_test_socket_posix *) handle)->last_rwflags = rwflags;
     return true;
 }
@@ -130,7 +134,10 @@ obfs_test_posix_sendto(openvpn_vsocket_handle_t handle, const void *buf, size_t 
         ((struct obfs_test_socket_posix *) handle)->last_rwflags &= ~OPENVPN_VSOCKET_EVENT_WRITE;
     /* FIXME: Doesn't handle partial transfers. (That might not be an
        issue here anyway?) This is just here to preserve the expected
-       invariant of return value <= len. */
+       invariant of return value <= len. (What we really need is to
+       either punt on partial sends entirely (or almost-entirely) or
+       decide to translate effective lengths back. Almost definitely
+       the former. */
     if (result > len)
         result = len;
     warnx("obfs-test: sendto(%d) -> %d", (int)len, (int)result);
