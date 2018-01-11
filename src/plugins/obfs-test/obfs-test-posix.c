@@ -1,3 +1,6 @@
+#include "obfs-test.h"
+/* TODO: should probably conditionalize at Automake time instead */
+#ifdef OPENVPN_VSOCKET_PLATFORM_POSIX
 #include <stdbool.h>
 #include <string.h>
 #include <err.h>
@@ -6,9 +9,6 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include "obfs-test.h"
-/* TODO: should probably conditionalize at Automake time instead */
-#ifdef OPENVPN_VSOCKET_PLATFORM_POSIX
 
 struct obfs_test_socket_posix
 {
