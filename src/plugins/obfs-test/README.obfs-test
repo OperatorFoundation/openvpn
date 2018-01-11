@@ -19,3 +19,18 @@ The new APIs used here are not final and do not cover every desired
 use case or have completely clear semantics, but the most essential
 ways in which the plugin needs to be able to interact with the core
 event loop and socket code are demonstrably present.
+
+----
+Update of 2018-01-11:
+
+This proof of concept now also runs on Windows using Winsock 2
+overlapped I/O. Small changes have also been made to the OpenVPN core
+to allow this to work properly. The protocol is the same as before,
+and a Windows client interoperates with the Linux version server side.
+
+Test configuration was Windows 10 Professional 64-bit, cross-compiled
+using MinGW64 from Fedora.
+
+This has not been stress-tested, so the I/O translation is not
+empirically known to be robust, but it succeeds at basically passing
+packets back and forth using the obfuscated protocol.
