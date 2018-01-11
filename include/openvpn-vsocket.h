@@ -7,7 +7,9 @@
 
 /* Win32 */
 #define OPENVPN_VSOCKET_PLATFORM_WIN32
+#include <stdbool.h>
 #include <windows.h>
+#include <winsock2.h>
 
 /* Must be compatible with event_t (const struct rw_handle *) */
 typedef const struct {
@@ -21,6 +23,7 @@ typedef int openvpn_vsocket_socklen_t;
 
 /* POSIX-y */
 #define OPENVPN_VSOCKET_PLATFORM_POSIX
+#include <stdbool.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/socket.h>
