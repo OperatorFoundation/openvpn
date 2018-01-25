@@ -11,7 +11,7 @@
 #include <windows.h>
 #include <winsock2.h>
 
-typedef const struct {
+typedef const struct openvpn_vsocket_win32_event_pair {
     HANDLE read;
     HANDLE write;
 } *openvpn_vsocket_native_event_t;

@@ -102,10 +102,7 @@ struct obfs_test_socket_win32
     SOCKET socket;
 
     /* Write is ready when idle; read is not-ready when idle. Both level-triggered. */
-    struct {
-        HANDLE read;
-        HANDLE write;
-    } completion_events;
+    struct openvpn_vsocket_win32_event_pair completion_events;
     struct io_slot slot_read, slot_write;
 
     int last_rwflags;
