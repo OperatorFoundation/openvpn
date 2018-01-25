@@ -4041,7 +4041,7 @@ socket_do_indirect_pump(openvpn_vsocket_handle_t vsocket,
         }
     }
 
-    return vsocket->vtab->pump(vsocket);
+    return vsocket_translate_rwflags_in(vsocket->vtab->pump(vsocket));
 }
 
 #endif  /* ENABLE_PLUGIN */
