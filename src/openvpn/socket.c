@@ -3954,11 +3954,59 @@ struct encapsulated_event_set
     struct event_set *real;
 };
 
+#if EVENT_READ == OPENVPN_VSOCKET_EVENT_READ && \
+    EVENT_WRITE == OPENVPN_VSOCKET_EVENT_WRITE
+#define VSOCKET_EVENT_BITS_IDENTICAL 1
+#else
+#define VSOCKET_EVENT_BITS_IDENTICAL 0
+#endif
+
+static inline unsigned
+vsocket_translate_rwflags_in(unsigned vrwflags)
+{
+#if VSOCKET_EVENT_BITS_IDENTICAL
+    return vrwflags;
+#else
+    unsigned rwflags = 0;
+    if (vrwflags & OPENVPN_VSOCKET_EVENT_READ)
+        rwflags |= EVENT_READ;
+    if (vrwflags & OPENVPN_VSOCKET_EVENT_WRITE)
+        rwflags |= EVENT_WRITE;
+    return rwflags;
+#endif
+}
+
+static inline unsigned
+vsocket_translate_rwflags_out(unsigned rwflags)
+{
+#if VSOCKET_EVENT_BITS_IDENTICAL
+    return rwflags;
+#else
+    unsigned vrwflags = 0;
+    if (rwflags & EVENT_READ)
+        vrwflags |= OPENVPN_VSOCKET_EVENT_READ;
+    if (rwflags & EVENT_WRITE)
+        vrwflags |= OPENVPN_VSOCKET_EVENT_WRITE;
+    return vrwflags;
+#endif
+}
+
 static void
 encapsulated_event_set_set_event(openvpn_vsocket_event_set_handle_t handle,
-                                 openvpn_vsocket_native_event_t ev, unsigned rwflags,
+                                 openvpn_vsocket_native_event_t vev, unsigned vrwflags,
                                  void *arg)
 {
+    unsigned rwflags = vsocket_translate_rwflags_in(vrwflags);
+    event_t ev;
+#ifdef _WIN32
+    struct rw_handle rw;
+    rw.read = vev->read;
+    rw.write = vev->write;
+    ev = &rw;
+#else
+    ev = vev;
+#endif
+
     struct event_set *es = ((struct encapsulated_event_set *) handle)->real;
     /* FIXME: see obfs_test_request_event in obfs-test.c. */
     if (rwflags == 0)
@@ -3978,7 +4026,8 @@ socket_do_indirect_pump(openvpn_vsocket_handle_t vsocket,
     int i = 0;
     while (i < *esrlen)
     {
-        if (vsocket->vtab->update_event(vsocket, esr[i].arg, esr[i].rwflags))
+        unsigned vrwflags = vsocket_translate_rwflags_out(esr[i].rwflags);
+        if (vsocket->vtab->update_event(vsocket, esr[i].arg, vrwflags))
         {
             /* Consume the event; move the last one in place of it. */
             if (i != *esrlen - 1)
@@ -4025,10 +4074,11 @@ socket_set(struct link_socket *s,
 #ifdef ENABLE_PLUGIN
             if (s->indirect)
             {
+                unsigned vrwflags = vsocket_translate_rwflags_out(rwflags);
                 struct encapsulated_event_set encapsulated_es;
                 encapsulated_es.handle.vtab = &encapsulated_event_set_vtab;
                 encapsulated_es.real = es;
-                s->indirect->vtab->request_event(s->indirect, &encapsulated_es.handle, rwflags);
+                s->indirect->vtab->request_event(s->indirect, &encapsulated_es.handle, vrwflags);
             }
             else
 #endif

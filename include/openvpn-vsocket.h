@@ -11,7 +11,6 @@
 #include <windows.h>
 #include <winsock2.h>
 
-/* Must be compatible with event_t (const struct rw_handle *) */
 typedef const struct {
     HANDLE read;
     HANDLE write;
@@ -33,9 +32,8 @@ typedef socklen_t openvpn_vsocket_socklen_t;
 
 #endif
 
-/* Should match internal event.h */
-#define OPENVPN_VSOCKET_EVENT_READ  0x01
-#define OPENVPN_VSOCKET_EVENT_WRITE 0x02
+#define OPENVPN_VSOCKET_EVENT_READ  (1<<0)
+#define OPENVPN_VSOCKET_EVENT_WRITE (1<<1)
 
 typedef struct openvpn_vsocket_event_set_handle *openvpn_vsocket_event_set_handle_t;
 
