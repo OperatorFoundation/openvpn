@@ -1,6 +1,4 @@
 #include "obfs-test.h"
-/* TODO: should probably conditionalize at Automake time instead */
-#ifdef OPENVPN_VSOCKET_PLATFORM_POSIX
 #include <stdbool.h>
 #include <string.h>
 #include <err.h>
@@ -168,6 +166,3 @@ obfs_test_initialize_socket_vtab(void)
     obfs_test_socket_vtab.sendto = obfs_test_posix_sendto;
     obfs_test_socket_vtab.close = obfs_test_posix_close;
 }
-
-#endif /* OBFS_TEST_PLATFORM_POSIX */
-
