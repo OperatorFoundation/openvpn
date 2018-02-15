@@ -1019,7 +1019,7 @@ static void
 create_socket_indirect(struct link_socket *sock, sa_family_t ai_family)
 {
     const struct openvpn_vsocket_vtab *vtab = find_indirect_vtab(sock);
-    struct addrinfo *cur;
+    struct addrinfo *cur = NULL;
 
     if (!vtab)
         msg(M_FATAL, "INDIRECT: Socket bind failed: no provider plugin");
