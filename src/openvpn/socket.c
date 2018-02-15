@@ -3349,15 +3349,17 @@ int link_socket_read_indirect(struct link_socket *sock,
                               struct link_socket_actual *from)
 {
     socklen_t fromlen = sizeof(from->dest.addr);
+    socklen_t expectedlen = af_addr_size(sock->info.af);
     addr_zero_host(&from->dest);
 
     ASSERT(sock->indirect);
     buf->len = sock->indirect->vtab->recvfrom(
         sock->indirect, BPTR(buf), buf_forward_capacity(buf),
         &from->dest.addr.sa, &fromlen);
-    /* FIXME: do we need the same sort of expectedlen check as in
-       link_socket_read_udp_posix? We probably need to define
-       AF_OPENVPN_INDIRECT anyway, so defer all that. */
+    if (buf->len >= 0 && expectedlen && fromlen != expectedlen)
+    {
+        bad_address_length(fromlen, expectedlen);
+    }
     return buf->len;
 }
 
