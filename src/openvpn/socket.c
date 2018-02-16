@@ -1020,6 +1020,7 @@ create_socket_indirect(struct link_socket *sock, sa_family_t ai_family)
 {
     const struct openvpn_vsocket_vtab *vtab = find_indirect_vtab(sock);
     struct addrinfo *cur = NULL;
+    struct openvpn_sockaddr zero;
 
     if (!vtab)
         msg(M_FATAL, "INDIRECT: Socket bind failed: no provider plugin");
@@ -1043,9 +1044,20 @@ create_socket_indirect(struct link_socket *sock, sa_family_t ai_family)
     }
 
     if (cur)
+    {
         sock->indirect = vtab->bind(cur->ai_addr, cur->ai_addrlen);
+    }
+    else if (ai_family == AF_UNSPEC)
+    {
+        msg(M_ERR, "INDIRECT: cannot bind with unspecified address family");
+    }
     else
-        sock->indirect = vtab->bind(NULL, 0);
+    {
+        memset(&zero, 0, sizeof(zero));
+        zero.addr.sa.sa_family = ai_family;
+        addr_zero_host(&zero);
+        sock->indirect = vtab->bind(&zero.addr.sa, af_addr_size(ai_family));
+    }
 
     if (sock->indirect == NULL)
         msg(M_ERR, "INDIRECT: Socket bind failed");
