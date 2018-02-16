@@ -11,6 +11,7 @@
 struct obfs_test_socket_posix
 {
     struct openvpn_vsocket_handle handle;
+    struct obfs_test_context *ctx;
     int fd;
     unsigned last_rwflags;
 };
@@ -28,7 +29,7 @@ free_socket(struct obfs_test_socket_posix *sock)
 }
 
 static openvpn_vsocket_handle_t
-obfs_test_posix_bind(void *handle,
+obfs_test_posix_bind(void *plugin_handle,
                      const struct sockaddr *addr, socklen_t len)
 {
     struct obfs_test_socket_posix *sock = NULL;
@@ -44,6 +45,7 @@ obfs_test_posix_bind(void *handle,
     if (!sock)
         goto error;
     sock->handle.vtab = &obfs_test_socket_vtab;
+    sock->ctx = (struct obfs_test_context *) plugin_handle;
     /* Note that sock->fd isn't -1 yet. Set it explicitly if there are ever any
        error exits before the socket() call. */
 
@@ -71,7 +73,8 @@ obfs_test_posix_request_event(openvpn_vsocket_handle_t handle,
 {
     /* FIXME: this assumes one-shot events. The fast-mode/non-fast-mode distinction in
        the core event loop is awkward here. */
-    warnx("obfs-test: request-event: %d", rwflags);
+    obfs_test_log(((struct obfs_test_socket_posix *) handle)->ctx,
+                  PLOG_DEBUG, "request-event: %d", rwflags);
     ((struct obfs_test_socket_posix *) handle)->last_rwflags = 0;
     if (rwflags)
         event_set->vtab->set_event(event_set, ((struct obfs_test_socket_posix *) handle)->fd,
@@ -81,7 +84,8 @@ obfs_test_posix_request_event(openvpn_vsocket_handle_t handle,
 static bool
 obfs_test_posix_update_event(openvpn_vsocket_handle_t handle, void *arg, unsigned rwflags)
 {
-    warnx("obfs-test: update-event: %p, %p, %d", handle, arg, rwflags);
+    obfs_test_log(((struct obfs_test_socket_posix *) handle)->ctx,
+                  PLOG_DEBUG, "update-event: %p, %p, %d", handle, arg, rwflags);
     if (arg != handle)
         return false;
     /* TODO(low): do we need to handle what happens if core starts splitting up events here? */
@@ -92,7 +96,8 @@ obfs_test_posix_update_event(openvpn_vsocket_handle_t handle, void *arg, unsigne
 static unsigned
 obfs_test_posix_pump(openvpn_vsocket_handle_t handle)
 {
-    warnx("obfs-test: pump -> %d", ((struct obfs_test_socket_posix *) handle)->last_rwflags);
+    obfs_test_log(((struct obfs_test_socket_posix *) handle)->ctx,
+                  PLOG_DEBUG, "pump -> %d", ((struct obfs_test_socket_posix *) handle)->last_rwflags);
     return ((struct obfs_test_socket_posix *) handle)->last_rwflags;
 }
 
@@ -108,7 +113,8 @@ obfs_test_posix_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
         obfs_test_munge_addr(addr, *addrlen);
     if (result > 0)
         result = obfs_test_unmunge_buf(buf, result);
-    warnx("obfs-test: recvfrom(%d) -> %d", (int)len, (int)result);
+    obfs_test_log(((struct obfs_test_socket_posix *) handle)->ctx,
+                  PLOG_DEBUG, "recvfrom(%d) -> %d", (int)len, (int)result);
     return result;
 }
 
@@ -138,7 +144,8 @@ obfs_test_posix_sendto(openvpn_vsocket_handle_t handle, const void *buf, size_t 
        the former. */
     if (result > len)
         result = len;
-    warnx("obfs-test: sendto(%d) -> %d", (int)len, (int)result);
+    obfs_test_log(((struct obfs_test_socket_posix *) handle)->ctx,
+                  PLOG_DEBUG, "sendto(%d) -> %d", (int)len, (int)result);
     free(addr_rev);
     free(buf_munged);
     return result;

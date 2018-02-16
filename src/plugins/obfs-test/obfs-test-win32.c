@@ -7,17 +7,6 @@
 #include <winsock2.h>
 #include <assert.h>
 
-/* FIXME: general error reporting back to core / use logging callbacks */
-static void
-warnx(const char *fmt, ...)
-{
-    va_list va;
-    va_start(va, fmt);
-    vfprintf(stderr, fmt, va);
-    putc('\n', stderr);
-    va_end(va);
-}
-
 static inline bool
 is_invalid_handle(HANDLE h)
 {
@@ -34,6 +23,7 @@ typedef enum {
 /* must be calloc'able */
 struct io_slot
 {
+    struct obfs_test_context *ctx;
     io_slot_status_t status;
     OVERLAPPED overlapped;
     SOCKET socket;
@@ -49,8 +39,10 @@ struct io_slot
 };
 
 static bool
-setup_io_slot(struct io_slot *slot, SOCKET socket, HANDLE event)
+setup_io_slot(struct io_slot *slot, struct obfs_test_context *ctx,
+              SOCKET socket, HANDLE event)
 {
+    slot->ctx = ctx;
     slot->status = IO_SLOT_DORMANT;
     slot->addr_cap = sizeof(SOCKADDR_STORAGE);
     slot->socket = socket;
@@ -70,7 +62,8 @@ destroy_io_slot(struct io_slot *slot)
                                          TRUE /* wait */, &flags);
         if (!ok && WSAGetLastError() == WSA_IO_INCOMPLETE)
         {
-            warnx("obfs-test: destroying I/O slot: canceled operation is still incomplete after wait?!");
+            obfs_test_log(slot->ctx, PLOG_ERR,
+                          "destroying I/O slot: canceled operation is still incomplete after wait?!");
             return false;
         }
     }
@@ -99,6 +92,7 @@ resize_io_buf(struct io_slot *slot, size_t cap)
 struct obfs_test_socket_win32
 {
     struct openvpn_vsocket_handle handle;
+    struct obfs_test_context *ctx;
     SOCKET socket;
 
     /* Write is ready when idle; read is not-ready when idle. Both level-triggered. */
@@ -138,7 +132,7 @@ free_socket(struct obfs_test_socket_win32 *sock)
     if (!can_free)
     {
         /* Skip deinitialization of everything else. Doomed. */
-        warnx("obfs-test: doomed, leaking the entire socket structure");
+        obfs_test_log(sock->ctx, PLOG_ERR, "doomed, leaking the entire socket structure");
         return;
     }
 
@@ -151,7 +145,7 @@ free_socket(struct obfs_test_socket_win32 *sock)
 }
 
 static openvpn_vsocket_handle_t
-obfs_test_win32_bind(void *handle,
+obfs_test_win32_bind(void *plugin_handle,
                      const struct sockaddr *addr, openvpn_vsocket_socklen_t len)
 {
     struct obfs_test_socket_win32 *sock = NULL;
@@ -168,6 +162,7 @@ obfs_test_win32_bind(void *handle,
     if (!sock)
         goto error;
     sock->handle.vtab = &obfs_test_socket_vtab;
+    sock->ctx = (struct obfs_test_context *) plugin_handle;
 
     /* Preemptively initialize the members of some Win32 types so error exits are okay later on.
        HANDLEs of NULL are considered invalid per above. */
@@ -182,9 +177,11 @@ obfs_test_win32_bind(void *handle,
     sock->completion_events.write = CreateEvent(NULL, TRUE, TRUE, NULL);
     if (is_invalid_handle(sock->completion_events.read) || is_invalid_handle(sock->completion_events.write))
         goto error;
-    if (!setup_io_slot(&sock->slot_read, sock->socket, sock->completion_events.read))
+    if (!setup_io_slot(&sock->slot_read, sock->ctx,
+                       sock->socket, sock->completion_events.read))
         goto error;
-    if (!setup_io_slot(&sock->slot_write, sock->socket, sock->completion_events.write))
+    if (!setup_io_slot(&sock->slot_write, sock->ctx,
+                       sock->socket, sock->completion_events.write))
         goto error;
 
     if (bind(sock->socket, addr_rev, len))
@@ -193,7 +190,8 @@ obfs_test_win32_bind(void *handle,
     return &sock->handle;
 
 error:
-    warnx("obfs-test: bind failure: WSA error = %d", WSAGetLastError());
+    obfs_test_log((struct obfs_test_context *) plugin_handle, PLOG_ERROR,
+                  "bind failure: WSA error = %d", WSAGetLastError());
     free_socket(sock);
     free(addr_rev);
     return NULL;
@@ -367,7 +365,7 @@ obfs_test_win32_request_event(openvpn_vsocket_handle_t handle,
     /* FIXME: this _still_ assumes one-shot events (in the underlying event set in core), I think. The
        fast-mode/non-fast-mode distinction in core is awkward here. */
     struct obfs_test_socket_win32 *sock = (struct obfs_test_socket_win32 *)handle;
-    warnx("obfs-test: request-event: %d", rwflags);
+    obfs_test_log(sock->ctx, PLOG_DEBUG, "request-event: %d", rwflags);
     sock->last_rwflags = 0;
 
     if (rwflags & OPENVPN_VSOCKET_EVENT_READ)
@@ -379,7 +377,8 @@ obfs_test_win32_request_event(openvpn_vsocket_handle_t handle,
 static bool
 obfs_test_win32_update_event(openvpn_vsocket_handle_t handle, void *arg, unsigned rwflags)
 {
-    warnx("obfs-test: update-event: %p, %p, %d", handle, arg, rwflags);
+    obfs_test_log(((struct obfs_test_socket_win32 *) handle)->ctx, PLOG_DEBUG,
+                  "update-event: %p, %p, %d", handle, arg, rwflags);
     if (arg != handle)
         return false;
     /* We probably get multiple calls on Win32 because core event handler splits up read/write events. */
@@ -399,7 +398,7 @@ obfs_test_win32_pump(openvpn_vsocket_handle_t handle)
         (sock->slot_write.status != IO_SLOT_PENDING || complete_pending_write(sock)))
         result |= OPENVPN_VSOCKET_EVENT_WRITE;
 
-    warnx("obfs-test: pump -> %d", result);
+    obfs_test_log(sock->text, PLOG_DEBUG, "pump -> %d", result);
     return result;
 }
 

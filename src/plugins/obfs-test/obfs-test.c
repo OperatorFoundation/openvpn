@@ -68,3 +68,13 @@ openvpn_plugin_get_vtab_v1(int selector, size_t *size_out)
             return NULL;
     }
 }
+
+void
+obfs_test_log(struct obfs_test_context *ctx,
+              openvpn_plugin_log_flags_t flags, const char *fmt, ...)
+{
+    va_list va;
+    va_start(va, fmt);
+    ctx->global_vtab->plugin_vlog(flags, OBFS_TEST_PLUGIN_NAME, fmt, va);
+    va_end(va);
+}
