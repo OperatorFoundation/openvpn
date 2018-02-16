@@ -92,9 +92,10 @@ struct openvpn_vsocket_handle {
      - recvfrom/sendto may occur at any time between bind and close, including
        interleaved with the event request cycle above.
      - close must occur last.
- */
 
-/* TODO: document or coalesce error behavior between platforms (currently uses platform-native errors only) */
+   Error reporting is platform-native: errno on POSIX-y systems, or Winsock errors
+   on Windows systems.
+ */
 
 struct openvpn_vsocket_vtab {
     /* Bind a new virtual socket to addr/len. addr must not be NULL.
