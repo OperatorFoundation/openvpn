@@ -190,7 +190,7 @@ obfs_test_win32_bind(void *plugin_handle,
     return &sock->handle;
 
 error:
-    obfs_test_log((struct obfs_test_context *) plugin_handle, PLOG_ERROR,
+    obfs_test_log((struct obfs_test_context *) plugin_handle, PLOG_ERR,
                   "bind failure: WSA error = %d", WSAGetLastError());
     free_socket(sock);
     free(addr_rev);
@@ -393,7 +393,7 @@ obfs_test_win32_pump(openvpn_vsocket_handle_t handle)
         (sock->slot_write.status != IO_SLOT_PENDING || complete_pending_write(sock)))
         result |= OPENVPN_VSOCKET_EVENT_WRITE;
 
-    obfs_test_log(sock->text, PLOG_DEBUG, "pump -> %d", result);
+    obfs_test_log(sock->ctx, PLOG_DEBUG, "pump -> %d", result);
     return result;
 }
 
