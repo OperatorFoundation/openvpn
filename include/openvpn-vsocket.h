@@ -83,8 +83,8 @@ struct openvpn_vsocket_handle {
     const struct openvpn_vsocket_vtab *vtab;
 };
 
-/* Virtual socket implementations should expect (and consumers must provide) vtable
-   calls in the following order:
+/* Virtual socket implementations should expect (and consumers must
+   provide) vtable calls in the following order:
 
      - bind must occur first.
      - request_event is followed by zero or more update_event calls, and then a
@@ -93,8 +93,8 @@ struct openvpn_vsocket_handle {
        interleaved with the event request cycle above.
      - close must occur last.
 
-   Error reporting is platform-native: errno on POSIX-y systems, or Winsock errors
-   on Windows systems.
+   Error reporting is platform-native: errno on POSIX-y systems, or
+   Winsock errors on Windows systems.
  */
 
 struct openvpn_vsocket_vtab {
@@ -120,7 +120,8 @@ struct openvpn_vsocket_vtab {
        FIXME: we don't handle the timeout case here; do we need to do that or
        can we punt to bridge events? */
     void (*request_event)(openvpn_vsocket_handle_t handle,
-                           openvpn_vsocket_event_set_handle_t event_set, unsigned rwflags);
+                          openvpn_vsocket_event_set_handle_t event_set,
+                          unsigned rwflags);
 
     /* Indicate to the virtual socket that a native event for which arg was
        provided to a set_event call above became ready in a manner indicated by
@@ -130,27 +131,32 @@ struct openvpn_vsocket_vtab {
        If arg corresponds to a requested event, update_event does any necessary
        internal state updates and _returns true_ to consume the event.
 
-       If arg does not correspond to a requested event, update_event does nothing
-       and _returns false_. */
-    bool (*update_event)(openvpn_vsocket_handle_t handle, void *arg, unsigned rwflags);
+       If arg does not correspond to a requested event, update_event
+       does nothing and _returns false_. */
+    bool (*update_event)(openvpn_vsocket_handle_t handle, void *arg,
+                         unsigned rwflags);
 
-    /* Perform any pending processing that can be performed immediately, and return
-       a bitmask indicating whether this virtual socket is ready to receive/send
-       more packets. */
+    /* Perform any pending processing that can be performed immediately, and
+       return a bitmask indicating whether this virtual socket is ready to
+       receive/send more packets. */
     unsigned (*pump)(openvpn_vsocket_handle_t handle);
 
     /* Receive a packet into buf/len, storing the address into addr/*addrlen and
        updating *addrlen to match. Returns -1 on error, or the number of bytes
        received. Must not block; signals an error if there is nothing to
        receive. */
-    ssize_t (*recvfrom)(openvpn_vsocket_handle_t handle, void *buf, size_t len,
-                        struct sockaddr *addr, openvpn_vsocket_socklen_t *addrlen);
+    ssize_t (*recvfrom)(openvpn_vsocket_handle_t handle,
+                        void *buf, size_t len,
+                        struct sockaddr *addr,
+                        openvpn_vsocket_socklen_t *addrlen);
 
-    /* Send a packet from buf/len to the address addr/addrlen. Returns -1 on error,
-       or the number of bytes sent. Must not block; signals an error if there is
-       no room to send. */
-    ssize_t (*sendto)(openvpn_vsocket_handle_t handle, const void *buf, size_t len,
-                      const struct sockaddr *addr, openvpn_vsocket_socklen_t addrlen);
+    /* Send a packet from buf/len to the address addr/addrlen. Returns -1 on
+       error, or the number of bytes sent. Must not block; signals an error if
+       there is no room to send. */
+    ssize_t (*sendto)(openvpn_vsocket_handle_t handle,
+                      const void *buf, size_t len,
+                      const struct sockaddr *addr,
+                      openvpn_vsocket_socklen_t addrlen);
 
     /* Destroy this virtual socket and free all resources allocated for it. The
        virtual socket must not be used afterward. */
