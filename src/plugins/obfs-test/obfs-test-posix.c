@@ -49,8 +49,7 @@ obfs_test_posix_bind(void *plugin_handle,
     /* Note that sock->fd isn't -1 yet. Set it explicitly if there are ever any
        error exits before the socket() call. */
 
-    /* FIXME: should take family from bind address */
-    sock->fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    sock->fd = socket(addr->sa_family, SOCK_DGRAM, IPPROTO_UDP);
     if (sock->fd == -1)
         goto error;
     if (fcntl(sock->fd, F_SETFL, fcntl(sock->fd, F_GETFL) | O_NONBLOCK))
@@ -71,8 +70,6 @@ static void
 obfs_test_posix_request_event(openvpn_vsocket_handle_t handle,
                               openvpn_vsocket_event_set_handle_t event_set, unsigned rwflags)
 {
-    /* FIXME: this assumes one-shot events. The fast-mode/non-fast-mode distinction in
-       the core event loop is awkward here. */
     obfs_test_log(((struct obfs_test_socket_posix *) handle)->ctx,
                   PLOG_DEBUG, "request-event: %d", rwflags);
     ((struct obfs_test_socket_posix *) handle)->last_rwflags = 0;
@@ -88,8 +85,7 @@ obfs_test_posix_update_event(openvpn_vsocket_handle_t handle, void *arg, unsigne
                   PLOG_DEBUG, "update-event: %p, %p, %d", handle, arg, rwflags);
     if (arg != handle)
         return false;
-    /* TODO(low): do we need to handle what happens if core starts splitting up events here? */
-    ((struct obfs_test_socket_posix *) handle)->last_rwflags = rwflags;
+    ((struct obfs_test_socket_posix *) handle)->last_rwflags |= rwflags;
     return true;
 }
 
@@ -106,13 +102,24 @@ obfs_test_posix_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
                          struct sockaddr *addr, socklen_t *addrlen)
 {
     int fd = ((struct obfs_test_socket_posix *) handle)->fd;
-    ssize_t result = recvfrom(fd, buf, len, 0, addr, addrlen);
+    ssize_t result;
+    
+again:
+    result = recvfrom(fd, buf, len, 0, addr, addrlen);
     if (result < 0 && errno == EAGAIN)
         ((struct obfs_test_socket_posix *) handle)->last_rwflags &= ~OPENVPN_VSOCKET_EVENT_READ;
     if (*addrlen > 0)
         obfs_test_munge_addr(addr, *addrlen);
     if (result > 0)
+    {
         result = obfs_test_unmunge_buf(buf, result);
+        if (result < 0)
+        {
+            /* Pretend that read never happened. */
+            goto again;
+        }
+    }
+
     obfs_test_log(((struct obfs_test_socket_posix *) handle)->ctx,
                   PLOG_DEBUG, "recvfrom(%d) -> %d", (int)len, (int)result);
     return result;
@@ -136,12 +143,7 @@ obfs_test_posix_sendto(openvpn_vsocket_handle_t handle, const void *buf, size_t 
     result = sendto(fd, buf_munged, len_munged, 0, addr_rev, addrlen);
     if (result < 0 && errno == EAGAIN)
         ((struct obfs_test_socket_posix *) handle)->last_rwflags &= ~OPENVPN_VSOCKET_EVENT_WRITE;
-    /* FIXME: Doesn't handle partial transfers. (That might not be an
-       issue here anyway?) This is just here to preserve the expected
-       invariant of return value <= len. (What we really need is to
-       either punt on partial sends entirely (or almost-entirely) or
-       decide to translate effective lengths back. Almost definitely
-       the former. */
+    /* TODO: not clear what to do here for partial transfers. */
     if (result > len)
         result = len;
     obfs_test_log(((struct obfs_test_socket_posix *) handle)->ctx,

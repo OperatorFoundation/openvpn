@@ -332,7 +332,6 @@ static bool
 complete_pending_read(struct obfs_test_socket_win32 *sock)
 {
     bool done = complete_pending_operation(&sock->slot_read);
-    /* TODO: do we still need this? */
     if (done)
         ResetEvent(sock->completion_events.read);
     return done;
@@ -352,7 +351,6 @@ static inline bool
 complete_pending_write(struct obfs_test_socket_win32 *sock)
 {
     bool done = complete_pending_operation(&sock->slot_write);
-    /* TODO: do we still need this? */
     if (done)
         SetEvent(sock->completion_events.write);
     return done;
@@ -362,8 +360,6 @@ static void
 obfs_test_win32_request_event(openvpn_vsocket_handle_t handle,
                               openvpn_vsocket_event_set_handle_t event_set, unsigned rwflags)
 {
-    /* FIXME: this _still_ assumes one-shot events (in the underlying event set in core), I think. The
-       fast-mode/non-fast-mode distinction in core is awkward here. */
     struct obfs_test_socket_win32 *sock = (struct obfs_test_socket_win32 *)handle;
     obfs_test_log(sock->ctx, PLOG_DEBUG, "request-event: %d", rwflags);
     sock->last_rwflags = 0;
@@ -381,7 +377,6 @@ obfs_test_win32_update_event(openvpn_vsocket_handle_t handle, void *arg, unsigne
                   "update-event: %p, %p, %d", handle, arg, rwflags);
     if (arg != handle)
         return false;
-    /* We probably get multiple calls on Win32 because core event handler splits up read/write events. */
     ((struct obfs_test_socket_win32 *) handle)->last_rwflags |= rwflags;
     return true;
 }
@@ -426,9 +421,11 @@ obfs_test_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
     ssize_t unmunged_len = obfs_test_unmunge_buf(working_buf, sock->slot_read.buf_len);
     if (unmunged_len < 0)
     {
+        /* Act as though this read never happened. Assume one was queued before, so it should
+           still remain queued. */
         consumed_pending_read(sock);
-        /* TODO: is this a reasonable I/O error? */
-        WSASetLastError(WSAENETRESET);
+        ensure_pending_read(sock);
+        WSASetLastError(WSA_IO_INCOMPLETE);
         return -1;
     }
 
@@ -437,7 +434,8 @@ obfs_test_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
         copy_len = len;
     memcpy(buf, sock->slot_read.buf, copy_len);
 
-    /* TODO: what to do if not enough space? Currently truncates. */
+    /* TODO: shouldn't truncate, should signal error (but this shouldn't happen for any
+       supported address families anyway). */
     openvpn_vsocket_socklen_t addr_copy_len = *addrlen;
     if (sock->slot_read.addr_len < addr_copy_len)
         addr_copy_len = sock->slot_read.addr_len;
