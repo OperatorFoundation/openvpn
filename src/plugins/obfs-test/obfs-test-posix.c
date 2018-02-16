@@ -27,9 +27,9 @@ free_socket(struct obfs_test_socket_posix *sock)
     free(sock);
 }
 
-/* TODO: need to provide plugin handle here */
 static openvpn_vsocket_handle_t
-obfs_test_posix_bind(const struct sockaddr *addr, socklen_t len)
+obfs_test_posix_bind(void *handle,
+                     const struct sockaddr *addr, socklen_t len)
 {
     struct obfs_test_socket_posix *sock = NULL;
     struct sockaddr *addr_rev = NULL;

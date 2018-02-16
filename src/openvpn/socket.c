@@ -991,7 +991,7 @@ bind_local(struct link_socket *sock, const sa_family_t ai_family)
 
 #ifdef ENABLE_PLUGIN
 static struct openvpn_vsocket_vtab *
-find_indirect_vtab(struct link_socket *sock)
+find_indirect_vtab(struct link_socket *sock, openvpn_plugin_handle_t *handlep)
 {
     int i, n;
 
@@ -1008,6 +1008,7 @@ find_indirect_vtab(struct link_socket *sock)
             if (!vtab)
                 continue;
             ASSERT(size == sizeof(struct openvpn_vsocket_vtab));
+            *handlep = p->plugin_handle;
             return vtab;
         }
     }
@@ -1018,7 +1019,8 @@ find_indirect_vtab(struct link_socket *sock)
 static void
 create_socket_indirect(struct link_socket *sock, sa_family_t ai_family)
 {
-    const struct openvpn_vsocket_vtab *vtab = find_indirect_vtab(sock);
+    openvpn_plugin_handle_t handle;
+    const struct openvpn_vsocket_vtab *vtab = find_indirect_vtab(sock, &handle);
     struct addrinfo *cur = NULL;
     struct openvpn_sockaddr zero;
 
@@ -1045,7 +1047,7 @@ create_socket_indirect(struct link_socket *sock, sa_family_t ai_family)
 
     if (cur)
     {
-        sock->indirect = vtab->bind(cur->ai_addr, cur->ai_addrlen);
+        sock->indirect = vtab->bind(handle, cur->ai_addr, cur->ai_addrlen);
     }
     else if (ai_family == AF_UNSPEC)
     {
@@ -1056,7 +1058,7 @@ create_socket_indirect(struct link_socket *sock, sa_family_t ai_family)
         memset(&zero, 0, sizeof(zero));
         zero.addr.sa.sa_family = ai_family;
         addr_zero_host(&zero);
-        sock->indirect = vtab->bind(&zero.addr.sa, af_addr_size(ai_family));
+        sock->indirect = vtab->bind(handle, &zero.addr.sa, af_addr_size(ai_family));
     }
 
     if (sock->indirect == NULL)

@@ -97,9 +97,11 @@ struct openvpn_vsocket_handle {
 /* TODO: document or coalesce error behavior between platforms (currently uses platform-native errors only) */
 
 struct openvpn_vsocket_vtab {
-    /* Bind a new virtual socket to addr/len. addr must not be NULL. FIXME: but
-       sometimes it is anyway? Should be able to defer initiation, probably. */
-    openvpn_vsocket_handle_t (*bind)(const struct sockaddr *addr, openvpn_vsocket_socklen_t len);
+    /* Bind a new virtual socket to addr/len. addr must not be NULL.
+       plugin_handle is actually of type openvpn_plugin_handle_t. */
+    openvpn_vsocket_handle_t (*bind)(void *plugin_handle,
+                                     const struct sockaddr *addr,
+                                     openvpn_vsocket_socklen_t len);
 
     /* Given the bitmask rwflags, request that event_set be provided with all
        native events that should be waited on such that whenever this virtual

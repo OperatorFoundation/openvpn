@@ -151,7 +151,8 @@ free_socket(struct obfs_test_socket_win32 *sock)
 }
 
 static openvpn_vsocket_handle_t
-obfs_test_win32_bind(const struct sockaddr *addr, openvpn_vsocket_socklen_t len)
+obfs_test_win32_bind(void *handle,
+                     const struct sockaddr *addr, openvpn_vsocket_socklen_t len)
 {
     struct obfs_test_socket_win32 *sock = NULL;
     struct sockaddr *addr_rev = NULL;
