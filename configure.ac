@@ -215,6 +215,13 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[plugin-u2f-server],
+        [AS_HELP_STRING([--enable-plugin-u2f-server], [enable u2f-server plugin @<:@default=no@:>@])],
+        ,
+        [enable_plugin_u2f_server="no"]
+)
+
+AC_ARG_ENABLE(
 	[pam-dlopen],
 	[AS_HELP_STRING([--enable-pam-dlopen], [dlopen libpam @<:@default=no@:>@])],
 	,
@@ -1317,6 +1324,7 @@ AM_CONDITIONAL([WIN32], [test "${WIN32}" = "yes"])
 AM_CONDITIONAL([GIT_CHECKOUT], [test "${GIT_CHECKOUT}" = "yes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_AUTH_PAM], [test "${enable_plugin_auth_pam}" = "yes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_DOWN_ROOT], [test "${enable_plugin_down_root}" = "yes"])
+AM_CONDITIONAL([ENABLE_PLUGIN_U2F_SERVER], [test "${enable_plugin_u2f_server}" = "yes"])
 AM_CONDITIONAL([ENABLE_CRYPTO], [test "${enable_crypto}" = "yes"])
 AM_CONDITIONAL([HAVE_LD_WRAP_SUPPORT], [test "${have_ld_wrap_support}" = "yes"])
 
@@ -1374,6 +1382,7 @@ AC_CONFIG_FILES([
 	src/plugins/Makefile
 	src/plugins/auth-pam/Makefile
 	src/plugins/down-root/Makefile
+        src/plugins/u2f-server/Makefile
 	tests/Makefile
         tests/unit_tests/Makefile
         tests/unit_tests/example_test/Makefile
