@@ -80,6 +80,12 @@ openvpn_plugin_func_v1(openvpn_plugin_handle_t handle, int type,
         return OPENVPN_PLUGIN_FUNC_ERROR;
     }
 
+    for (const char **e = envp; *e; e++)
+    {
+        u2f_server_log(ctx, PLOG_DEBUG,
+                       "env: %s", *e);
+    }
+
     /* Not actually relevant yet. But it will be. */
     if (!acf)
     {
