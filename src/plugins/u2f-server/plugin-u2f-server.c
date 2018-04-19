@@ -207,7 +207,7 @@ openvpn_plugin_func_v1(openvpn_plugin_handle_t handle, int type,
             return OPENVPN_PLUGIN_FUNC_ERROR;
         default:
             u2f_server_log(ctx, PLOG_ERR, "2fserver sent wrong response opcode: %d",
-                           OP_AUTH_RESPONSE);
+                           (unsigned char)response[0]);
             return OPENVPN_PLUGIN_FUNC_ERROR;
     }
 
