@@ -56,6 +56,11 @@ u2f_server_log(struct u2f_server_context *ctx,
 static void
 exec_child(int control_socket)
 {
+    /* Control socket needs to make it to the child process.
+       TODO: maybe use posix_spawn here?
+     */
+    fcntl(control_socket, F_SETFD, fcntl(control_socket, F_GETFD) & ~FD_CLOEXEC);
+
     char arg0[32];
     snprintf(arg0, sizeof(arg0), "-s%d", control_socket);
     /* TODO: better way of finding executable */
