@@ -60,6 +60,8 @@ exec_child(int control_socket)
     snprintf(arg0, sizeof(arg0), "-s%d", control_socket);
     /* TODO: better way of finding executable */
     execlp("openvpn-2fserver", arg0, NULL);
+    /* exec failed. */
+    abort();
 }
 
 static int
@@ -67,7 +69,7 @@ wait_child_init(int control_socket)
 {
     char packet[1024];
     /* XXX */
-    return !!recv(control_socket, packet, 1024, 0);
+    return recv(control_socket, packet, 1024, 0) > 0;
 }
 
 OPENVPN_EXPORT int
