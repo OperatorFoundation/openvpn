@@ -144,6 +144,15 @@ comm_2fserver_parse_packet(const char *packet, size_t len,
                 }
                 break;
 
+            case 'b':
+                /* Single byte. */
+                if (remaining < 1)
+                    goto bad;
+                *va_arg(va, unsigned char *) = (unsigned char)*tail;
+                remaining--;
+                tail++;
+                break;
+
             case 's':
                 /* Null-terminated string. */
                 zero = memchr(tail, '\0', remaining);
