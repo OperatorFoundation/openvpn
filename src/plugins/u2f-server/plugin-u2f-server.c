@@ -74,7 +74,7 @@ wait_child_init(int control_socket)
 {
     char packet[1024];
     /* XXX */
-    return recv(control_socket, packet, 1024, 0) > 0;
+    return recv(control_socket, packet, 1024, 0) <= 0;
 }
 
 OPENVPN_EXPORT int
