@@ -17,11 +17,20 @@ comm_2fserver_send_packet(int sock, uint8_t opcode, const char *fmt, ...)
 
     const char *string;
     size_t slen;
+    int fds[MAX_PACKET_FDS];
+    size_t nfds = 0;
 
     for (const char *f = fmt; *f; f++)
     {
         switch (*f)
         {
+            case 'F':
+                /* File descriptor. */
+                if (nfds >= MAX_PACKET_FDS)
+                    goto bad;
+                fds[nfds++] = va_arg(va, int);
+                break;
+
             case 'b':
                 /* Single byte. */
                 if (space < 1)
@@ -50,9 +59,33 @@ comm_2fserver_send_packet(int sock, uint8_t opcode, const char *fmt, ...)
 
     va_end(va);
 
+    union {
+        char data[CMSG_SPACE(sizeof(int) * MAX_PACKET_FDS)];
+        struct cmsghdr align;
+    } ancillary;
+    struct iovec iov = {
+        .iov_base = packet,
+        .iov_len = fill - packet
+    };
+    struct msghdr msg = {
+        .msg_iov = &iov,
+        .msg_iovlen = 1
+    };
+
+    if (nfds > 0)
+    {
+        msg.msg_control = ancillary.data;
+        msg.msg_controllen = CMSG_SPACE(sizeof(int) * nfds);
+        struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
+        cmsg->cmsg_level = SOL_SOCKET;
+        cmsg->cmsg_type = SCM_RIGHTS;
+        cmsg->cmsg_len = CMSG_LEN(sizeof(int) * nfds);
+        memcpy(CMSG_DATA(cmsg), fds, sizeof(int) * nfds);
+    }
+    
     ssize_t len;
     do {
-        len = send(sock, packet, fill - packet, 0);
+        len = sendmsg(sock, &msg, 0);
     } while (len == -1 && errno == EAGAIN);
     return len;
 
