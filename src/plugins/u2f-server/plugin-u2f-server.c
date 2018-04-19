@@ -110,6 +110,7 @@ openvpn_plugin_open_v3(int version,
     else
     {
         /* In main process. */
+        u2f_server_log(ctx, PLOG_NOTE, "launched 2fserver with PID %d", child);
         close(control_socket[1]);
         control_socket[1] = -1;
         err = wait_child_init(control_socket[0]);
