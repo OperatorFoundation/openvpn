@@ -193,12 +193,22 @@ openvpn_plugin_func_v1(openvpn_plugin_handle_t handle, int type,
         return OPENVPN_PLUGIN_FUNC_ERROR;
     }
 
-    if ((unsigned char)response[0] != OP_AUTH_RESPONSE)
+    const char *error;
+    switch ((unsigned char)response[0])
     {
-        /* TODO: handle error opcode specially */
-        u2f_server_log(ctx, PLOG_ERR, "2fserver sent wrong response opcode: %d",
-                       OP_AUTH_RESPONSE);
-        return OPENVPN_PLUGIN_FUNC_ERROR;
+        case OP_AUTH_RESPONSE:
+            /* Keep going. */
+            break;
+        case OP_ERROR:
+            if (comm_2fserver_parse_packet(response, len, NULL, "s", &error))
+                u2f_server_log(ctx, PLOG_ERR, "2fserver sent bad error packet");
+            else
+                u2f_server_log(ctx, PLOG_ERR, "2fserver sent error: %s", error);
+            return OPENVPN_PLUGIN_FUNC_ERROR;
+        default:
+            u2f_server_log(ctx, PLOG_ERR, "2fserver sent wrong response opcode: %d",
+                           OP_AUTH_RESPONSE);
+            return OPENVPN_PLUGIN_FUNC_ERROR;
     }
 
     unsigned char result;
