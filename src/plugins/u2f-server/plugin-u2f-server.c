@@ -192,6 +192,11 @@ openvpn_plugin_func_v1(openvpn_plugin_handle_t handle, int type,
         u2f_server_log(ctx, PLOG_ERR, "2fserver sent bad zero-length response");
         return OPENVPN_PLUGIN_FUNC_ERROR;
     }
+    else if (len == -1)
+    {
+        u2f_server_log(ctx, PLOG_ERR | PLOG_ERRNO, "receiving from 2fserver");
+        return OPENVPN_PLUGIN_FUNC_ERROR;
+    }
 
     const char *error;
     switch ((unsigned char)response[0])
