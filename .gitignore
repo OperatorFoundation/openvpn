@@ -63,6 +63,7 @@ t_client_ips.rc
 tests/unit_tests/**/*_testdriver
 
 src/openvpn/openvpn
+src/plugins/u2f-server/openvpn-2fserver
 include/openvpn-plugin.h
 config-version.h
 nbproject
