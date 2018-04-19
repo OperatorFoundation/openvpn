@@ -59,7 +59,7 @@ exec_child(int control_socket)
     char arg0[32];
     snprintf(arg0, sizeof(arg0), "-s%d", control_socket);
     /* TODO: better way of finding executable */
-    execlp("openvpn-2fserver", arg0, NULL);
+    execlp("openvpn-2fserver", "openvpn-2fserver", arg0, NULL);
     /* exec failed. */
     abort();
 }
