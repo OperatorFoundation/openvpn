@@ -1,0 +1,2 @@
+Requires libcurl and libu2f-host to be installed.
+Requires --enable-plugins --enable-plugin-u2f-client --with-libu2f-host=

@@ -26,6 +26,9 @@ dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.59)
 
 m4_include(version.m4)
+m4_include(libcurl.m4)
+m4_include(libu2f-host.m4)
+
 AC_INIT([PRODUCT_NAME], [PRODUCT_VERSION], [PRODUCT_BUGREPORT], [PRODUCT_TARNAME])
 m4_include(compat.m4)
 AC_DEFINE([OPENVPN_VERSION_RESOURCE], [PRODUCT_VERSION_RESOURCE], [Version in windows resource format])
@@ -219,6 +222,13 @@ AC_ARG_ENABLE(
         [AS_HELP_STRING([--enable-plugin-u2f-server], [enable u2f-server plugin @<:@default=no@:>@])],
         ,
         [enable_plugin_u2f_server="no"]
+)
+
+AC_ARG_ENABLE(
+	[plugin-u2f-client],
+        [AS_HELP_STRING([--enable-plugin-u2f-client], [enable u2f-client plugin @<:@default=no@:>@])],
+        ,
+        [enable_plugin_u2f_client="no"]
 )
 
 AC_ARG_ENABLE(
@@ -1325,8 +1335,12 @@ AM_CONDITIONAL([GIT_CHECKOUT], [test "${GIT_CHECKOUT}" = "yes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_AUTH_PAM], [test "${enable_plugin_auth_pam}" = "yes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_DOWN_ROOT], [test "${enable_plugin_down_root}" = "yes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_U2F_SERVER], [test "${enable_plugin_u2f_server}" = "yes"])
+AM_CONDITIONAL([ENABLE_PLUGIN_U2F_CLIENT], [test "${enable_plugin_u2f_client}" = "yes"])
 AM_CONDITIONAL([ENABLE_CRYPTO], [test "${enable_crypto}" = "yes"])
 AM_CONDITIONAL([HAVE_LD_WRAP_SUPPORT], [test "${have_ld_wrap_support}" = "yes"])
+
+LIBCURL_CHECK_CONFIG("yes", "7.7.2", [], [])
+LIBU2FHOST_CHECK_CONFIG("yes", "1.1.4", [], [])
 
 sampledir="\$(docdir)/sample"
 AC_SUBST([plugindir])
@@ -1363,7 +1377,6 @@ else
    AM_CONDITIONAL([CMOCKA_INITIALIZED], [false])
 fi
 
-
 AC_CONFIG_FILES([
 	version.sh
 	Makefile
@@ -1383,6 +1396,7 @@ AC_CONFIG_FILES([
 	src/plugins/auth-pam/Makefile
 	src/plugins/down-root/Makefile
         src/plugins/u2f-server/Makefile
+        src/plugins/u2f-client/Makefile
 	tests/Makefile
         tests/unit_tests/Makefile
         tests/unit_tests/example_test/Makefile
