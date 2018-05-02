@@ -6,6 +6,11 @@ AM_CFLAGS = \
 	$(PLUGIN_U2F_CLIENT_CFLAGS) \
 	$(OPTIONAL_CRYPTO_CFLAGS)
 
+AM_CPPFLAGS = \
+	-I$(top_srcdir)/include \
+	$(PLUGIN_U2F_CLIENT_CFLAGS) \
+	$(OPTIONAL_CRYPTO_CFLAGS)
+
 if ENABLE_PLUGIN_U2F_CLIENT
 plugin_LTLIBRARIES = openvpn-plugin-u2f-client.la
 sbin_PROGRAMS = openvpn-2fclient

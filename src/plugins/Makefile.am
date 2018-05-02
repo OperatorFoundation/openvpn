@@ -12,4 +12,4 @@
 MAINTAINERCLEANFILES = \
 	$(srcdir)/Makefile.in
 
-SUBDIRS = auth-pam down-root u2f-server
+SUBDIRS = auth-pam down-root u2f-server u2f-client

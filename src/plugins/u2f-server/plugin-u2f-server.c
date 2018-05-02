@@ -13,6 +13,7 @@
 #include "comm-2fserver.h"
 
 #define U2F_SERVER_PLUGIN_NAME "u2f-server"
+#define SOCK_CLOEXEC 0
 
 struct u2f_server_context
 {

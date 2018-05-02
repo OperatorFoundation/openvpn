@@ -1294,6 +1294,10 @@ if test "${enable_plugin_auth_pam}" = "yes"; then
 	fi
 fi
 
+if test "${enable_plugin_u2f_client}" = "yes"; then
+	PLUGIN_U2F_CLIENT_CFLAGS="${LIBU2FHOST_CPPFLAGS}"
+fi
+
 if test "${enable_async_push}" = "yes"; then
 	AC_CHECK_HEADERS(
 		[sys/inotify.h],

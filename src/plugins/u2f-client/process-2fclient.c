@@ -172,8 +172,37 @@ main(int argc, char *argv[])
         exit(66);
     }
 
+    u2fh_initflags flags=U2FH_DEBUG;
+    u2fh_rc init_result = u2fh_global_init(flags);
+    if(init_result != U2FH_OK)
+    {
+      fprintf(stderr, "Error initializing u2fh library: %s", u2fh_strerror(init_result));
+      u2fh_global_done();
+      exit(67);
+    }
+
+    u2fh_devs *devs;
+    init_result = u2fh_devs_init(&devs);
+    if(init_result != U2FH_OK)
+    {
+      fprintf(stderr, "Error initializing u2fh device list: %s", u2fh_strerror(init_result));
+      u2fh_global_done();
+      exit(68);
+    }
+
+    init_result = u2fh_devs_discover(devs, NULL);
+    if(init_result != U2FH_OK)
+    {
+      fprintf(stderr, "No U2F devices found: %s", u2fh_strerror(init_result));
+      u2fh_devs_done(devs);
+      u2fh_global_done();
+      exit(69);
+    }
+
     comm_2fclient_send_packet(control_socket, OP_INITIALIZED,
                               "b", BACKEND_PROTOCOL_VERSION);
     control_loop(control_socket);
+    u2fh_devs_done(devs);
+    u2fh_global_done();
     return 0;
 }
