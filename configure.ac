@@ -799,6 +799,15 @@ if test -z "${LIBPAM_LIBS}"; then
 	)
 fi
 
+dnl TODO: This uses AS_IF even though surrounding code doesn't. Hmm.
+AS_IF([test "${enable_plugin_u2f_server}" = "yes"],
+	[PKG_CHECK_MODULES(
+		[LIBMICROHTTPD],
+	        [libmicrohttpd],
+	        [have_libmicrohttpd="yes"]
+	)]
+)
+
 case "${with_mem_check}" in
 	valgrind)
 		AC_CHECK_HEADERS(

@@ -6,7 +6,11 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <signal.h>
 #include <sys/socket.h>
+/* PORTING: see section 1.5 of the libmicrohttpd manual, "Including the
+   microhttpd.h header", if porting to non-GNU/Linux systems */
+#include "microhttpd.h"
 #include "openvpn-plugin.h"
 #include "comm-2fserver.h"
 
@@ -105,6 +109,43 @@ control_loop(int sock)
     }
 }
 
+/* This handler exists mainly for libmicrohttpd portability reasons as
+   documented in section 1.6 of its manual. Note that technically this
+   isn't required on Linux, but it'd be an easy omission when porting
+   otherwise... */
+static void
+set_sigpipe_handler(void)
+{
+    struct sigaction sa = {
+        .sa_handler = SIG_IGN,
+        .sa_flags = SA_RESTART
+    };
+    sigemptyset(&sa.sa_mask);
+
+    if (sigaction(SIGPIPE, &sa, NULL))
+    {
+        fprintf(stderr, "%s: cannot set SIGPIPE handler\n", program_name);
+        exit(71);
+    }
+}
+
+struct cli_args {
+    int control_socket;
+};
+
+/* args are presumed valid on entry. */
+static int
+truemain(const struct cli_args *args)
+{
+    int control_socket = args->control_socket;
+    set_sigpipe_handler();
+
+    comm_2fserver_send_packet(control_socket, OP_INITIALIZED,
+                              "b", BACKEND_PROTOCOL_VERSION);
+    control_loop(control_socket);
+    return 0;
+}
+
 static int
 parse_fd(const char *arg)
 {
@@ -130,7 +171,9 @@ show_usage(void)
 int
 main(int argc, char *argv[])
 {
-    int control_socket = -1;
+    struct cli_args args = {
+        .control_socket = -1
+    };
     int option;
 
     while ((option = getopt(argc, argv, ":s:h")) != -1)
@@ -138,7 +181,7 @@ main(int argc, char *argv[])
         switch (option)
         {
             case 's':
-                control_socket = parse_fd(optarg);
+                args.control_socket = parse_fd(optarg);
                 break;
             case 'h':
                 show_usage();
@@ -161,15 +204,12 @@ main(int argc, char *argv[])
         }
     }
 
-    if (control_socket == -1)
+    if (args.control_socket == -1)
     {
         fprintf(stderr, "%s: no control socket found\n", program_name);
         show_usage();
         exit(66);
     }
 
-    comm_2fserver_send_packet(control_socket, OP_INITIALIZED,
-                              "b", BACKEND_PROTOCOL_VERSION);
-    control_loop(control_socket);
-    return 0;
+    return truemain(&args);
 }
