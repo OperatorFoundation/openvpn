@@ -159,14 +159,15 @@ openvpn_plugin_func_v1(openvpn_plugin_handle_t handle, int type,
 
     const char *username = get_env("username", envp);
     const char *password = get_env("password", envp);
+    const char *origin = get_env("origin", envp);
     const char *common_name = get_env("common_name", envp);
     const char *acf = get_env("auth_control_file", envp);
 
     /* Note that in optional mode these could be empty strings, not just NULL. */
-    if (!username || !password)
+    if (!username || !password || !origin)
     {
         u2f_client_log(ctx, PLOG_ERR,
-                       "expected username/password in environment set");
+                       "expected username, password, and origin in environment set");
         return OPENVPN_PLUGIN_FUNC_ERROR;
     }
 
@@ -186,7 +187,7 @@ openvpn_plugin_func_v1(openvpn_plugin_handle_t handle, int type,
     }
 
     comm_2fclient_send_packet(ctx->control_socket, OP_AUTH_REQUEST,
-                              "Fss", acf_fd, username, password);
+                              "Fsss", acf_fd, username, password, origin);
     close(acf_fd);
 
     /* TODO: factor out receive-and-parse */

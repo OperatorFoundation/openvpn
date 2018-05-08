@@ -48,9 +48,10 @@ do_auth_request(u2fh_devs *devs, const char *packet, size_t len, struct msghdr *
     int fd;
     const char *username;
     const char *password;
+    const char *origin;
 
     if (comm_2fclient_parse_packet(packet, len, msg,
-                                   "Fss", &fd, &username, &password))
+                                   "Fss", &fd, &username, &password, &origin))
     {
         *error = "malformed auth request";
         return AUTH_RESPONSE_ERROR;
@@ -71,9 +72,8 @@ do_auth_request(u2fh_devs *devs, const char *packet, size_t len, struct msghdr *
     chunk.memory = malloc(1);  /* will be grown as needed by the realloc above */
     chunk.size = 0;    /* no data at this point */
 
-    const char *origin="https://demo.yubico.com/wsapi";
     char url[1024];
-    sprintf(url, "%s/wsapi/u2f/sign?username=%s&password=%s", origin, username, password);
+    sprintf(url, "https://%s/wsapi/u2f/sign?username=%s&password=%s", origin, username, password);
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
@@ -89,8 +89,6 @@ do_auth_request(u2fh_devs *devs, const char *packet, size_t len, struct msghdr *
       return AUTH_RESPONSE_ERROR;
     }
 
-    curl_easy_cleanup(curl);
-
     // Convert to null-terminated string
     char *challenge=malloc(chunk.size+1);
     memcpy(challenge, chunk.memory, chunk.size);
@@ -103,10 +101,24 @@ do_auth_request(u2fh_devs *devs, const char *packet, size_t len, struct msghdr *
     u2fh_rc result = u2fh_authenticate2(devs, challenge, origin,
              response, &response_len,
              U2FH_REQUEST_USER_PRESENCE);
-
     free(challenge);
 
-    if(result == U2FH_OK)
+    if(result != U2FH_OK)
+    {
+      curl_easy_cleanup(curl);
+      return AUTH_RESPONSE_IMMEDIATE_DENY;
+    }
+
+    // Convert to null-terminated string
+    memset(response, 0, response_len);
+
+    sprintf(url, "https://%s/wsapi/u2f/verify?username=%s&password=%s&data=%s", origin, username, password, response);
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_result=curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+
+    if(curl_result == CURLE_OK)
     {
       return AUTH_RESPONSE_IMMEDIATE_PERMIT;
     }
