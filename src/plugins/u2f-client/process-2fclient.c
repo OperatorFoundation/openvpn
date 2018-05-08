@@ -10,6 +10,8 @@
 
 #include <curl/curl.h>
 #include <u2f-host/u2f-host.h>
+#include "randombytes/randombytes.h"
+#include "b64/b64.h"
 
 #include "openvpn-plugin.h"
 #include "comm-2fclient.h"
@@ -49,6 +51,8 @@ do_auth_request(u2fh_devs *devs, const char *packet, size_t len, struct msghdr *
     const char *username;
     const char *password;
     const char *origin;
+    unsigned char txidbytes[128];
+    char *txid;
 
     if (comm_2fclient_parse_packet(packet, len, msg,
                                    "Fss", &fd, &username, &password, &origin))
@@ -59,6 +63,9 @@ do_auth_request(u2fh_devs *devs, const char *packet, size_t len, struct msghdr *
 
     /* The worst password check ever, redux. */
     int ok = (strcmp(username, password) == 0);
+
+    randombytes(txidbytes, 128);
+    txid=b64_encode(txidbytes, 128);
 
     CURL *curl=curl_easy_init();
     if(!curl)
@@ -73,7 +80,7 @@ do_auth_request(u2fh_devs *devs, const char *packet, size_t len, struct msghdr *
     chunk.size = 0;    /* no data at this point */
 
     char url[1024];
-    sprintf(url, "https://%s/wsapi/u2f/sign?username=%s&password=%s", origin, username, password);
+    sprintf(url, "https://%s/wsapi/u2f/sign?username=%s:%s&password=%s", origin, username, txid, password);
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
@@ -112,7 +119,7 @@ do_auth_request(u2fh_devs *devs, const char *packet, size_t len, struct msghdr *
     // Convert to null-terminated string
     memset(response, 0, response_len);
 
-    sprintf(url, "https://%s/wsapi/u2f/verify?username=%s&password=%s&data=%s", origin, username, password, response);
+    sprintf(url, "https://%s/wsapi/u2f/verify?username=%s:%s&password=%s&data=%s", origin, username, txid, password, response);
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_result=curl_easy_perform(curl);
