@@ -45,7 +45,7 @@ WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
 
 static int
 do_auth_request(u2fh_devs *devs, const char *packet, size_t len, struct msghdr *msg,
-                const char **error)
+                const char **error, int register_first)
 {
     int fd;
     const char *username;
@@ -53,10 +53,28 @@ do_auth_request(u2fh_devs *devs, const char *packet, size_t len, struct msghdr *
     const char *origin;
     unsigned char txidbytes[128];
     char *txid;
+    long http_result;
+    char *register_challenge;
+    char *auth_challenge;
+
+    struct MemoryStruct chunk;
+    chunk.memory = malloc(1);  /* will be grown as needed by the realloc above */
+    chunk.size = 0;    /* no data at this point */
+
+    CURL *curl=curl_easy_init();
+    if(!curl)
+    {
+        free(chunk.memory);
+        curl_easy_cleanup(curl);
+        *error = "Could not initialize libcurl";
+        return AUTH_RESPONSE_ERROR;
+    }
 
     if (comm_2fclient_parse_packet(packet, len, msg,
                                    "Fss", &fd, &username, &password, &origin))
     {
+        free(chunk.memory);
+        curl_easy_cleanup(curl);
         *error = "malformed auth request";
         return AUTH_RESPONSE_ERROR;
     }
@@ -67,71 +85,236 @@ do_auth_request(u2fh_devs *devs, const char *packet, size_t len, struct msghdr *
     randombytes(txidbytes, 128);
     txid=b64_encode(txidbytes, 128);
 
-    CURL *curl=curl_easy_init();
-    if(!curl)
-    {
-      curl_easy_cleanup(curl);
-      *error = "Could not initialize libcurl";
-      return AUTH_RESPONSE_ERROR;
-    }
-
-    struct MemoryStruct chunk;
-    chunk.memory = malloc(1);  /* will be grown as needed by the realloc above */
-    chunk.size = 0;    /* no data at this point */
+    /*
+     * Endpoints for 2F server
+     *
+     * GET /auth/:id
+     *   200, body: (JSON blob) - challenge being provided
+     *   204 - no second factor, already okay
+     *   303 → registration endpoint - in-band registration required
+     *   ??? - out-of-band registration required
+     *   (in 4xx because the client itself can't continue or retry)
+     *   4xx - bad txn ID or other request problems
+     *   5xx - broken
+     *
+     * POST /auth/:id, body: (JSON blob with response)
+     *   202 - OK
+     *   403 - bad response
+     *   4xx - other request problems
+     *   5xx - broken
+     *
+     * GET /register/:id
+     *   200, body: (JSON blob) - challenge being provided
+     *   204 - already registered, no challenge available
+     *   4xx - bad txn ID or other request problems
+     *   5xx - broken
+     *
+     * POST /register/:id, body:(JSON blob with response)
+     *   202 - OK
+     *   403 - bad response
+     *   4xx - other request problems
+     *   5xx - broken
+     *
+     */
 
     char url[1024];
-    sprintf(url, "https://%s/wsapi/u2f/sign?username=%s:%s&password=%s", origin, username, txid, password);
+
+    if(register_first)
+    {
+        sprintf(url, "https://%s/register/%s", origin, txid);
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
+
+        CURLcode curl_result=curl_easy_perform(curl);
+        if(curl_result!=CURLE_OK)
+        {
+            free(chunk.memory);
+            curl_easy_cleanup(curl);
+            *error = "Error from libcurl";
+            return AUTH_RESPONSE_ERROR;
+        }
+
+
+        curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_result);
+        switch(http_result)
+        {
+            case 200:
+                /* 200, body: (JSON blob) - challenge being provided */
+                // Convert to null-terminated string
+                register_challenge=malloc(chunk.size+1);
+                memcpy(register_challenge, chunk.memory, chunk.size);
+                memset(register_challenge, 0, chunk.size);
+
+                char response[2048];
+                size_t response_len = sizeof (response);
+
+                u2fh_rc result = u2fh_register2(devs, register_challenge, origin,
+                                                    response, &response_len,
+                                                    U2FH_REQUEST_USER_PRESENCE);
+                free(register_challenge);
+
+                if(result != U2FH_OK)
+                {
+                    free(chunk.memory);
+                    curl_easy_cleanup(curl);
+                    return AUTH_RESPONSE_IMMEDIATE_DENY;
+                }
+
+                // Convert to null-terminated string
+                memset(response, 0, response_len);
+
+                sprintf(url, "https://%s/register/%s", origin, txid);
+                curl_easy_setopt(curl, CURLOPT_URL, url);
+                curl_easy_setopt(curl, CURLOPT_POST, 1);
+                curl_easy_setopt(curl, CURLOPT_POSTFIELDS, response);
+                curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, response_len);
+
+                curl_result=curl_easy_perform(curl);
+                if(curl_result!=CURLE_OK)
+                {
+                    free(chunk.memory);
+                    curl_easy_cleanup(curl);
+                    *error = "Error from libcurl";
+                    return AUTH_RESPONSE_ERROR;
+                }
+
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_result);
+                switch(http_result)
+                {
+                    case 202:
+                        /* 202 - OK */
+                        break;
+                    case 403:
+                        /* 403 - bad response */
+                        free(chunk.memory);
+                        curl_easy_cleanup(curl);
+                        return AUTH_RESPONSE_IMMEDIATE_DENY;
+                    default:
+                        free(chunk.memory);
+                        curl_easy_cleanup(curl);
+                        return AUTH_RESPONSE_ERROR;
+                }
+            case 204:
+                /* 204 - no second factor, already okay */
+                break;
+            case 303:
+                /* 303 → registration endpoint - in-band registration required */
+                if(register_first)
+                {
+                    free(chunk.memory);
+                    curl_easy_cleanup(curl);
+                    *error = "Stuck in a registration loop";
+                    return AUTH_RESPONSE_ERROR;
+                }
+                else
+                {
+                    free(chunk.memory);
+                    curl_easy_cleanup(curl);
+                    return do_auth_request(devs, packet, len, msg, error, 1);
+                }
+            default:
+                free(chunk.memory);
+                curl_easy_cleanup(curl);
+                *error = "Bad result from libcurl fetching response";
+                return AUTH_RESPONSE_ERROR;
+        }
+    }
+
+    sprintf(url, "https://%s/auth/%s", origin, txid);
     curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_HTTPGET, 1);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&chunk);
 
     // Call curl_easy_setopt()?
     CURLcode curl_result=curl_easy_perform(curl);
-    if(curl_result != CURLE_OK)
+    if(curl_result!=CURLE_OK)
     {
-      free(chunk.memory);
-      curl_easy_cleanup(curl);
-      *error = "Bad result from libcurl fetching response";
-      return AUTH_RESPONSE_ERROR;
+        free(chunk.memory);
+        curl_easy_cleanup(curl);
+        *error = "Error from libcurl";
+        return AUTH_RESPONSE_ERROR;
     }
 
-    // Convert to null-terminated string
-    char *challenge=malloc(chunk.size+1);
-    memcpy(challenge, chunk.memory, chunk.size);
-    memset(challenge, 0, chunk.size);
-    free(chunk.memory);
-
-    char response[2048];
-    size_t response_len = sizeof (response);
-
-    u2fh_rc result = u2fh_authenticate2(devs, challenge, origin,
-             response, &response_len,
-             U2FH_REQUEST_USER_PRESENCE);
-    free(challenge);
-
-    if(result != U2FH_OK)
+    curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_result);
+    switch(http_result)
     {
-      curl_easy_cleanup(curl);
-      return AUTH_RESPONSE_IMMEDIATE_DENY;
-    }
+        case 200:
+            /* 200, body: (JSON blob) - challenge being provided */
+            // Convert to null-terminated string
+            auth_challenge=malloc(chunk.size+1);
+            memcpy(auth_challenge, chunk.memory, chunk.size);
+            memset(auth_challenge, 0, chunk.size);
 
-    // Convert to null-terminated string
-    memset(response, 0, response_len);
+            char response[2048];
+            size_t response_len = sizeof (response);
 
-    sprintf(url, "https://%s/wsapi/u2f/verify?username=%s:%s&password=%s&data=%s", origin, username, txid, password, response);
-    curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-    curl_result=curl_easy_perform(curl);
-    curl_easy_cleanup(curl);
+            u2fh_rc result = u2fh_authenticate2(devs, auth_challenge, origin,
+                                                response, &response_len,
+                                                U2FH_REQUEST_USER_PRESENCE);
+            free(auth_challenge);
 
-    if(curl_result == CURLE_OK)
-    {
-      return AUTH_RESPONSE_IMMEDIATE_PERMIT;
-    }
-    else
-    {
-      return AUTH_RESPONSE_IMMEDIATE_DENY;
+            if(result != U2FH_OK)
+            {
+                curl_easy_cleanup(curl);
+                return AUTH_RESPONSE_IMMEDIATE_DENY;
+            }
+
+            // Convert to null-terminated string
+            memset(response, 0, response_len);
+
+            sprintf(url, "https://%s/auth/%s", origin, txid);
+            curl_easy_setopt(curl, CURLOPT_URL, url);
+            curl_easy_setopt(curl, CURLOPT_POST, 1);
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, response);
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, response_len);
+
+            curl_result=curl_easy_perform(curl);
+            if(curl_result!=CURLE_OK)
+            {
+                free(chunk.memory);
+                curl_easy_cleanup(curl);
+                *error = "Error from libcurl";
+                return AUTH_RESPONSE_ERROR;
+            }
+
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_result);
+            switch(http_result)
+            {
+                case 202:
+                    /* 202 - OK */
+                    free(chunk.memory);
+                    curl_easy_cleanup(curl);
+                    return AUTH_RESPONSE_IMMEDIATE_PERMIT;
+                case 403:
+                    /* 403 - bad response */
+                    free(chunk.memory);
+                    curl_easy_cleanup(curl);
+                    return AUTH_RESPONSE_IMMEDIATE_DENY;
+                default:
+                    free(chunk.memory);
+                    curl_easy_cleanup(curl);
+                    return AUTH_RESPONSE_ERROR;
+            }
+        case 204:
+            /* 204 - no second factor, already okay */
+            free(chunk.memory);
+            curl_easy_cleanup(curl);
+            return AUTH_RESPONSE_IMMEDIATE_PERMIT;
+            break;
+        case 303:
+            /* 303 → registration endpoint - in-band registration required */
+            free(chunk.memory);
+            curl_easy_cleanup(curl);
+            do_auth_request(devs, packet, len, msg, error, 1);
+            break;
+        default:
+            free(chunk.memory);
+            curl_easy_cleanup(curl);
+            *error = "Bad result from libcurl fetching response";
+            return AUTH_RESPONSE_ERROR;
     }
 }
 
@@ -177,7 +360,7 @@ control_loop(int sock, u2fh_devs *devs)
                 /* return rather than break, to exit loop. */
                 return;
             case OP_AUTH_REQUEST:
-                result = do_auth_request(devs, packet, (size_t)len, &msg, &error);
+                result = do_auth_request(devs, packet, (size_t)len, &msg, &error, 0);
                 switch (result)
                 {
                     case AUTH_RESPONSE_IMMEDIATE_PERMIT:
