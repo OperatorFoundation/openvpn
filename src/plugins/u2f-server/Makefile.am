@@ -18,7 +18,7 @@ endif
 # subprocess share that source file.
 
 openvpn_2fserver_SOURCES = \
-	process-2fserver.c \
+	2fserver-main.c \
 	comm-2fserver.c
 openvpn_2fserver_CFLAGS = \
 	$(AM_CFLAGS) $(LIBMICROHTTPD_CFLAGS)

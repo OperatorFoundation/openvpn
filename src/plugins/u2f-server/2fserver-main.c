@@ -8,9 +8,6 @@
 #include <string.h>
 #include <signal.h>
 #include <sys/socket.h>
-/* PORTING: see section 1.5 of the libmicrohttpd manual, "Including the
-   microhttpd.h header", if porting to non-GNU/Linux systems */
-#include "microhttpd.h"
 #include "openvpn-plugin.h"
 #include "comm-2fserver.h"
 
