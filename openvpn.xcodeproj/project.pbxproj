@@ -1,0 +1,320 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 50;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		4634A43720C1DCF40060669A /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 4634A43620C1DCF40060669A /* main.c */; };
+		4634A45720C1DD230060669A /* obfs-test.c in Sources */ = {isa = PBXBuildFile; fileRef = 4634A43D20C1DD220060669A /* obfs-test.c */; };
+		4634A45820C1DD230060669A /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = 4634A43E20C1DD220060669A /* Makefile */; };
+		4634A45A20C1DD230060669A /* obfs-test-posix.c in Sources */ = {isa = PBXBuildFile; fileRef = 4634A44020C1DD220060669A /* obfs-test-posix.c */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		4634A42920C1DC7D0060669A /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		4634A42B20C1DC7D0060669A /* openvpn */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = openvpn; sourceTree = BUILT_PRODUCTS_DIR; };
+		4634A43620C1DCF40060669A /* main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		4634A43D20C1DD220060669A /* obfs-test.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "obfs-test.c"; sourceTree = "<group>"; };
+		4634A43E20C1DD220060669A /* Makefile */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; path = Makefile; sourceTree = "<group>"; };
+		4634A44020C1DD220060669A /* obfs-test-posix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "obfs-test-posix.c"; sourceTree = "<group>"; };
+		4634A44120C1DD220060669A /* obfs-test.exports */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "obfs-test.exports"; sourceTree = "<group>"; };
+		4634A44320C1DD220060669A /* README.obfs-test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "README.obfs-test"; sourceTree = "<group>"; };
+		4634A44420C1DD220060669A /* obfs-test-win32.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "obfs-test-win32.c"; sourceTree = "<group>"; };
+		4634A44520C1DD220060669A /* obfs-test.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "obfs-test.h"; sourceTree = "<group>"; };
+		4634A45420C1DD220060669A /* Makefile.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Makefile.in; sourceTree = "<group>"; };
+		4634A46220C1DD6C0060669A /* openvpn-vsocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "openvpn-vsocket.h"; path = "include/openvpn-vsocket.h"; sourceTree = "<group>"; };
+		4634A46320C1DD6C0060669A /* openvpn-plugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "openvpn-plugin.h"; path = "include/openvpn-plugin.h"; sourceTree = "<group>"; };
+		4634A46720C84EE30060669A /* 1.0.16 */ = {isa = PBXFileReference; lastKnownFileType = folder; name = 1.0.16; path = ../../../../../usr/local/Cellar/libsodium/1.0.16; sourceTree = "<group>"; };
+		4634A46820C852F70060669A /* Makefile.am */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
+		4634A46920C854350060669A /* configure.ac */ = {isa = PBXFileReference; explicitFileType = text.script; fileEncoding = 4; path = configure.ac; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		4634A42820C1DC7D0060669A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		4634A42220C1DC7D0060669A = {
+			isa = PBXGroup;
+			children = (
+				4634A46720C84EE30060669A /* 1.0.16 */,
+				4634A46920C854350060669A /* configure.ac */,
+				4634A46320C1DD6C0060669A /* openvpn-plugin.h */,
+				4634A46220C1DD6C0060669A /* openvpn-vsocket.h */,
+				4634A43820C1DD220060669A /* obfs-test */,
+				4634A43520C1DCF40060669A /* openVPNXCode */,
+				4634A42C20C1DC7D0060669A /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		4634A42C20C1DC7D0060669A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4634A42B20C1DC7D0060669A /* openvpn */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		4634A43520C1DCF40060669A /* openVPNXCode */ = {
+			isa = PBXGroup;
+			children = (
+				4634A43620C1DCF40060669A /* main.c */,
+			);
+			path = openVPNXCode;
+			sourceTree = "<group>";
+		};
+		4634A43820C1DD220060669A /* obfs-test */ = {
+			isa = PBXGroup;
+			children = (
+				4634A44520C1DD220060669A /* obfs-test.h */,
+				4634A43D20C1DD220060669A /* obfs-test.c */,
+				4634A44020C1DD220060669A /* obfs-test-posix.c */,
+				4634A44420C1DD220060669A /* obfs-test-win32.c */,
+				4634A44120C1DD220060669A /* obfs-test.exports */,
+				4634A43E20C1DD220060669A /* Makefile */,
+				4634A46820C852F70060669A /* Makefile.am */,
+				4634A45420C1DD220060669A /* Makefile.in */,
+				4634A44320C1DD220060669A /* README.obfs-test */,
+			);
+			name = "obfs-test";
+			path = "src/plugins/obfs-test";
+			sourceTree = SOURCE_ROOT;
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		4634A42A20C1DC7D0060669A /* openvpn */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4634A43220C1DC7D0060669A /* Build configuration list for PBXNativeTarget "openvpn" */;
+			buildPhases = (
+				4634A42720C1DC7D0060669A /* Sources */,
+				4634A42820C1DC7D0060669A /* Frameworks */,
+				4634A42920C1DC7D0060669A /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = openvpn;
+			productName = openvpn;
+			productReference = 4634A42B20C1DC7D0060669A /* openvpn */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		4634A42320C1DC7D0060669A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0940;
+				ORGANIZATIONNAME = "Operator Foundation";
+				TargetAttributes = {
+					4634A42A20C1DC7D0060669A = {
+						CreatedOnToolsVersion = 9.4;
+					};
+				};
+			};
+			buildConfigurationList = 4634A42620C1DC7D0060669A /* Build configuration list for PBXProject "openvpn" */;
+			compatibilityVersion = "Xcode 9.3";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 4634A42220C1DC7D0060669A;
+			productRefGroup = 4634A42C20C1DC7D0060669A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				4634A42A20C1DC7D0060669A /* openvpn */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4634A42720C1DC7D0060669A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4634A45820C1DD230060669A /* Makefile in Sources */,
+				4634A45A20C1DD230060669A /* obfs-test-posix.c in Sources */,
+				4634A43720C1DCF40060669A /* main.c in Sources */,
+				4634A45720C1DD230060669A /* obfs-test.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		4634A43020C1DC7D0060669A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Mac Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		4634A43120C1DC7D0060669A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "Mac Developer";
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		4634A43320C1DC7D0060669A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 67Y4NSLDQ3;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		4634A43420C1DC7D0060669A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 67Y4NSLDQ3;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		4634A42620C1DC7D0060669A /* Build configuration list for PBXProject "openvpn" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4634A43020C1DC7D0060669A /* Debug */,
+				4634A43120C1DC7D0060669A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		4634A43220C1DC7D0060669A /* Build configuration list for PBXNativeTarget "openvpn" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4634A43320C1DC7D0060669A /* Debug */,
+				4634A43420C1DC7D0060669A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 4634A42320C1DC7D0060669A /* Project object */;
+}

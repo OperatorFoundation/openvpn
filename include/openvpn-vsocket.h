@@ -138,7 +138,7 @@ struct openvpn_vsocket_vtab {
        receive/send more packets. */
     unsigned (*pump)(openvpn_vsocket_handle_t handle);
 
-    /* Receive a packet into buf/len, storing the address into addr/*addrlen and
+    /* Receive a packet into buf/len, storing the address into addr/ *addrlen and
        updating *addrlen to match. Returns -1 on error, or the number of bytes
        received. Must not block; signals an error if there is nothing to
        receive. */

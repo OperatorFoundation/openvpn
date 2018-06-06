@@ -149,14 +149,14 @@ obfs_test_win32_bind(void *plugin_handle,
                      const struct sockaddr *addr, openvpn_vsocket_socklen_t len)
 {
     struct obfs_test_socket_win32 *sock = NULL;
-    struct sockaddr *addr_rev = NULL;
-
-    /* TODO: would be nice to factor out some of these sequences */
-    addr_rev = calloc(1, len);
-    if (!addr_rev)
-        goto error;
-    memcpy(addr_rev, addr, len);
-    obfs_test_munge_addr(addr_rev, len);
+//    struct sockaddr *addr_rev = NULL;
+//
+//    /* TODO: would be nice to factor out some of these sequences */
+//    addr_rev = calloc(1, len);
+//    if (!addr_rev)
+//        goto error;
+//    memcpy(addr_rev, addr, len);
+//    obfs_test_munge_addr(addr_rev, len);
 
     sock = calloc(1, sizeof(struct obfs_test_socket_win32));
     if (!sock)
@@ -168,32 +168,34 @@ obfs_test_win32_bind(void *plugin_handle,
        HANDLEs of NULL are considered invalid per above. */
     sock->socket = INVALID_SOCKET;
 
-    sock->socket = socket(addr_rev->sa_family, SOCK_DGRAM, IPPROTO_UDP);
+    sock->socket = socket(addr->sa_family, SOCK_DGRAM, IPPROTO_UDP);
     if (sock->socket == INVALID_SOCKET)
         goto error;
 
     /* See above: write is ready when idle, read is not-ready when idle. */
     sock->completion_events.read = CreateEvent(NULL, TRUE, FALSE, NULL);
     sock->completion_events.write = CreateEvent(NULL, TRUE, TRUE, NULL);
+    
     if (is_invalid_handle(sock->completion_events.read) || is_invalid_handle(sock->completion_events.write))
         goto error;
+    
     if (!setup_io_slot(&sock->slot_read, sock->ctx,
                        sock->socket, sock->completion_events.read))
         goto error;
+    
     if (!setup_io_slot(&sock->slot_write, sock->ctx,
                        sock->socket, sock->completion_events.write))
         goto error;
 
-    if (bind(sock->socket, addr_rev, len))
+    if (bind(sock->socket, addr, len))
         goto error;
-    free(addr_rev);
+
     return &sock->handle;
 
 error:
     obfs_test_log((struct obfs_test_context *) plugin_handle, PLOG_ERR,
                   "bind failure: WSA error = %d", WSAGetLastError());
     free_socket(sock);
-    free(addr_rev);
     return NULL;
 }
 
@@ -418,8 +420,9 @@ obfs_test_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
 
     /* sock->slot_read now has valid data. */
     char *working_buf = sock->slot_read.buf;
-    ssize_t unmunged_len = obfs_test_unmunge_buf(working_buf, sock->slot_read.buf_len);
-    if (unmunged_len < 0)
+    ssize_t working_len = working_buf.len
+    // ssize_t unmunged_len = obfs_test_unmunge_buf(working_buf, sock->slot_read.buf_len);
+    if (working_len < 0)
     {
         /* Act as though this read never happened. Assume one was queued before, so it should
            still remain queued. */
@@ -429,7 +432,7 @@ obfs_test_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
         return -1;
     }
 
-    size_t copy_len = unmunged_len;
+    size_t copy_len = working_len;
     if (copy_len > len)
         copy_len = len;
     memcpy(buf, sock->slot_read.buf, copy_len);
@@ -441,8 +444,8 @@ obfs_test_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
         addr_copy_len = sock->slot_read.addr_len;
     memcpy(addr, &sock->slot_read.addr, addr_copy_len);
     *addrlen = addr_copy_len;
-    if (addr_copy_len > 0)
-        obfs_test_munge_addr(addr, addr_copy_len);
+//    if (addr_copy_len > 0)
+//        obfs_test_munge_addr(addr, addr_copy_len);
 
     /* Reset the I/O slot before returning. */
     consumed_pending_read(sock);
@@ -473,10 +476,14 @@ obfs_test_win32_sendto(openvpn_vsocket_handle_t handle, const void *buf, size_t 
     /* TODO: propagate previous write errors---what does core expect here? */
     memcpy(&sock->slot_write.addr, addr, addrlen);
     sock->slot_write.addr_len = addrlen;
-    if (addrlen > 0)
-        obfs_test_munge_addr((struct sockaddr *)&sock->slot_write.addr, addrlen);
-    resize_io_buf(&sock->slot_write, obfs_test_max_munged_buf_size(len));
-    sock->slot_write.buf_len = obfs_test_munge_buf(sock->slot_write.buf, buf, len);
+//    if (addrlen > 0)
+//        obfs_test_munge_addr((struct sockaddr *)&sock->slot_write.addr, addrlen);
+    
+//    resize_io_buf(&sock->slot_write, obfs_test_max_munged_buf_size(len));
+    
+//    sock->slot_write.buf_len = obfs_test_munge_buf(sock->slot_write.buf, buf, len);
+    sock->slot_write.buf_len = len
+    
     queue_new_write(&sock->slot_write);
     switch (sock->slot_write.status)
     {

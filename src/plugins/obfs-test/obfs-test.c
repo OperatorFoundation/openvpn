@@ -20,26 +20,46 @@ free_context(struct obfs_test_context *context)
     free(context);
 }
 
+void
+obfs_test_log(struct obfs_test_context *ctx,
+              openvpn_plugin_log_flags_t flags, const char *fmt, ...)
+{
+    va_list va;
+    va_start(va, fmt);
+    ctx->global_vtab->plugin_vlog(flags, OBFS_TEST_PLUGIN_NAME, fmt, va);
+    va_end(va);
+}
+
+// OpenVPN Plugin API
+
 OPENVPN_EXPORT int
 openvpn_plugin_open_v3(int version, struct openvpn_plugin_args_open_in const *args,
                        struct openvpn_plugin_args_open_return *out)
 {
+    // This is just setting up the context
+    // Currently context only does logging to OpenVPN
     struct obfs_test_context *context;
-
     context = (struct obfs_test_context *) calloc(1, sizeof(struct obfs_test_context));
+    
     if (!context)
         return OPENVPN_PLUGIN_FUNC_ERROR;
 
     context->global_vtab = args->callbacks;
+    
+    // Sets up the VTable, useful stuff
     obfs_test_initialize_socket_vtab();
 
+    // Tells openVPN what events we want the plugin to handle
     out->type_mask = OPENVPN_PLUGIN_MASK(OPENVPN_PLUGIN_SOCKET_INTERCEPT);
+    
+    // Gives OpenVPN the handle object to save and later give back to us in other calls
     out->handle = (openvpn_plugin_handle_t *) context;
+    
     return OPENVPN_PLUGIN_FUNC_SUCCESS;
 
-err:
-    free_context(context);
-    return OPENVPN_PLUGIN_FUNC_ERROR;
+//err:
+//    free_context(context);
+//    return OPENVPN_PLUGIN_FUNC_ERROR;
 }
 
 OPENVPN_EXPORT void
@@ -57,6 +77,8 @@ openvpn_plugin_func_v3(int version,
     return OPENVPN_PLUGIN_FUNC_ERROR;
 }
 
+// Provides OpenVPN with the VTable
+// Functions on the VTable are called when there are network events
 OPENVPN_EXPORT void *
 openvpn_plugin_get_vtab_v1(int selector, size_t *size_out)
 {
@@ -71,14 +93,4 @@ openvpn_plugin_get_vtab_v1(int selector, size_t *size_out)
         default:
             return NULL;
     }
-}
-
-void
-obfs_test_log(struct obfs_test_context *ctx,
-              openvpn_plugin_log_flags_t flags, const char *fmt, ...)
-{
-    va_list va;
-    va_start(va, fmt);
-    ctx->global_vtab->plugin_vlog(flags, OBFS_TEST_PLUGIN_NAME, fmt, va);
-    va_end(va);
 }
