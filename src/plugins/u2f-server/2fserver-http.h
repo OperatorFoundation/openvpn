@@ -5,4 +5,6 @@
    microhttpd.h header", if porting to non-GNU/Linux systems */
 #include "microhttpd.h"
 
+void twofserver_start_http(unsigned port);
+
 #endif /* !TWOFSERVER_HTTP_H */

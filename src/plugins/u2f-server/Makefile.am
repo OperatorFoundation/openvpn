@@ -19,6 +19,9 @@ endif
 
 openvpn_2fserver_SOURCES = \
 	2fserver-main.c \
+	2fserver-http.c \
+	2fserver-model.c \
+	2fserver-support.c \
 	comm-2fserver.c
 openvpn_2fserver_CFLAGS = \
 	$(AM_CFLAGS) $(LIBMICROHTTPD_CFLAGS)

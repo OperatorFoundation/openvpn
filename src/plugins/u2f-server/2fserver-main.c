@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include "openvpn-plugin.h"
 #include "comm-2fserver.h"
+#include "2fserver-http.h"
 
 static const char program_name[] = "openvpn-2fserver";
 
@@ -30,7 +31,10 @@ do_auth_request(const char *packet, size_t len, struct msghdr *msg,
 
     /* The worst password check ever, redux. */
     int ok = (strcmp(username, password) == 0);
-    return ok ? AUTH_RESPONSE_IMMEDIATE_PERMIT : AUTH_RESPONSE_IMMEDIATE_DENY;
+    if (!ok)
+        return AUTH_RESPONSE_IMMEDIATE_DENY;
+    /* return AUTH_RESPONSE_PENDING; */
+    return AUTH_RESPONSE_IMMEDIATE_PERMIT;
 }
 
 static void
@@ -136,6 +140,8 @@ truemain(const struct cli_args *args)
 {
     int control_socket = args->control_socket;
     set_sigpipe_handler();
+    /* TODO: unhardcode port */
+    twofserver_start_http(11080);
 
     comm_2fserver_send_packet(control_socket, OP_INITIALIZED,
                               "b", BACKEND_PROTOCOL_VERSION);

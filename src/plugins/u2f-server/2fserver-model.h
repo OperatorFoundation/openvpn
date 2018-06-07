@@ -3,14 +3,25 @@
 
 #include <stdbool.h>
 #include <string.h>
-#include "2fserver-http.h"
+#include <pthread.h>
 
-typedef char twofserver_TxnId[TWOFSERVER_TXN_ID_LEN];
+#define TWOFSERVER_TXN_ID_LEN 32
+
+typedef struct {
+    char bytes[TWOFSERVER_TXN_ID_LEN];
+} twofserver_TxnId;
 
 static inline void
 twofserver_copy_txn_id(twofserver_TxnId *out, const twofserver_TxnId *in)
 {
     memcpy(out, in, sizeof(twofserver_TxnId));
+}
+
+static inline int
+twofserver_cmp_txn_id(const twofserver_TxnId *a, const twofserver_TxnId *b)
+{
+    /* TODO: where's the timing-safe memcmp again? */
+    return memcmp(a, b, sizeof(twofserver_TxnId));
 }
 
 /* A PendingAuth structure may be owned by the store of pending
@@ -26,10 +37,14 @@ twofserver_copy_txn_id(twofserver_TxnId *out, const twofserver_TxnId *in)
      - lock_pending_auth(id) -> locked
      - unlock_pending_auth(locked) -> becomes owned
      - destroy_pending_auth(locked) -> destroyed
+
+   TODO: that free/destroy distinction is kinda terrible
  */
 
 struct twofserver_PendingAuth {
     twofserver_TxnId txn_id;
+    bool locked;
+#if 0
     char *user;
     struct timespec deadline;
 
@@ -48,6 +63,7 @@ struct twofserver_PendingAuth {
 
     /* Secondary challenge/response passed (2F server side). */
     bool success2;
+#endif
 };
 
 enum twofserver_ChallengeResultType {
