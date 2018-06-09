@@ -157,36 +157,64 @@ openvpn_plugin_func_v1(openvpn_plugin_handle_t handle, int type,
         return OPENVPN_PLUGIN_FUNC_ERROR;
 
     const char *username = get_env("username", envp);
-    const char *password = get_env("password", envp);
+    const char *password_input = get_env("password", envp);
     const char *common_name = get_env("common_name", envp);
     const char *acf = get_env("auth_control_file", envp);
+    int acf_fd = -1;
+    char *password_dup = NULL;
+    char *password_proper = NULL;
+    char *txn_id_string = NULL;
 
     /* Note that in optional mode these could be empty strings, not just NULL. */
-    if (!username || !password)
+    if (!username || !password_input)
     {
         u2f_server_log(ctx, PLOG_ERR,
                        "expected username/password in environment set");
-        return OPENVPN_PLUGIN_FUNC_ERROR;
+        goto bad;
     }
 
     if (!acf)
     {
         u2f_server_log(ctx, PLOG_ERR,
                        "can't do deferred auth with no auth_control_file!");
-        return OPENVPN_PLUGIN_FUNC_ERROR;
+        goto bad;
     }
 
-    int acf_fd = open(acf, O_WRONLY, 0600);
+    acf_fd = open(acf, O_WRONLY, 0600);
     if (acf_fd == -1)
     {
         u2f_server_log(ctx, PLOG_ERR | PLOG_ERRNO,
                        "open auth_control_file %s", acf);
-        return OPENVPN_PLUGIN_FUNC_ERROR;
+        goto bad;
     }
 
+    password_dup = strdup(password_input);
+    if (!password_dup)
+    {
+        u2f_server_log(ctx, PLOG_ERR | PLOG_ERRNO, "strdup");
+        goto bad;
+    }
+
+    /* password_dup, copy of password_input, really contains
+       TXNID:PASSWORD. */
+    txn_id_string = password_dup;
+    password_proper = strchr(password_dup, ':');
+    if (!txn_id_string)
+    {
+        u2f_server_log(ctx, PLOG_ERR,
+                       "password input has no txn id separator");
+        goto bad;
+    }
+
+    /* Mutate the duplicated string to split at the colon. */
+    *password_proper = '\0';
+    password_proper++;
+
     comm_2fserver_send_packet(ctx->control_socket, OP_AUTH_REQUEST,
-                              "Fss", acf_fd, username, password);
+                              "Fsss", acf_fd, txn_id_string,
+                              username, password_proper);
     close(acf_fd);
+    acf_fd = -1;
 
     /* TODO: factor out receive-and-parse */
     char response[MAX_PACKET_BYTES];
@@ -198,12 +226,12 @@ openvpn_plugin_func_v1(openvpn_plugin_handle_t handle, int type,
     if (len == 0)
     {
         u2f_server_log(ctx, PLOG_ERR, "2fserver sent bad zero-length response");
-        return OPENVPN_PLUGIN_FUNC_ERROR;
+        goto bad;
     }
     else if (len == -1)
     {
         u2f_server_log(ctx, PLOG_ERR | PLOG_ERRNO, "receiving from 2fserver");
-        return OPENVPN_PLUGIN_FUNC_ERROR;
+        goto bad;
     }
 
     const char *error;
@@ -217,19 +245,22 @@ openvpn_plugin_func_v1(openvpn_plugin_handle_t handle, int type,
                 u2f_server_log(ctx, PLOG_ERR, "2fserver sent bad error packet");
             else
                 u2f_server_log(ctx, PLOG_ERR, "2fserver sent error: %s", error);
-            return OPENVPN_PLUGIN_FUNC_ERROR;
+            goto bad;
         default:
             u2f_server_log(ctx, PLOG_ERR, "2fserver sent wrong response opcode: %d",
                            (unsigned char)response[0]);
-            return OPENVPN_PLUGIN_FUNC_ERROR;
+            goto bad;
     }
 
     unsigned char result;
     if (comm_2fserver_parse_packet(response, len, NULL, "b", &result))
     {
         u2f_server_log(ctx, PLOG_ERR, "2fserver sent malformed auth response");
-        return OPENVPN_PLUGIN_FUNC_ERROR;
+        goto bad;
     }
+
+    /* Clean up before returning result. */
+    free(password_dup);
 
     switch (result)
     {
@@ -250,6 +281,14 @@ openvpn_plugin_func_v1(openvpn_plugin_handle_t handle, int type,
                            result);
             return OPENVPN_PLUGIN_FUNC_ERROR;
     }
+
+bad:
+    /* Clean up for error. */
+    if (acf_fd != -1)
+        close(acf_fd);
+    if (password_dup)
+        free(password_dup);
+    return OPENVPN_PLUGIN_FUNC_ERROR;
 }
 
 OPENVPN_EXPORT void

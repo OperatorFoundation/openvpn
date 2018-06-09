@@ -2,9 +2,12 @@
 #include <stdbool.h>
 #include "2fserver-http.h"
 #include "2fserver-support.h"
+#include "2fserver-model.h"
 
 static const char method_GET[] = "GET";
 static const char method_POST[] = "POST";
+
+static const char cookie_Txn[] = "Txn";
 
 static const char header_Content_Type[] = "Content-Type";
 static const char ct_text_plain[] = "text/plain";
@@ -38,6 +41,27 @@ handle_request(void *unused, struct MHD_Connection *conn,
                const char *url, const char *method, const char *version,
                const char *data, size_t *data_size, void **state_cell)
 {
+    const char *txn_id_string =
+        MHD_lookup_connection_value(conn, MHD_COOKIE_KIND, cookie_Txn);
+    twofserver_TxnId id;
+    int err = twofserver_txn_id_parse(&id, txn_id_string);
+    if (err)
+    {
+        return MHD_queue_response(conn, rcode_not_found, resp_not_found);
+    }
+
+    struct twofserver_PendingAuth *record =
+        twofserver_lock_pending_auth(id);
+    if (!record)
+    {
+        return MHD_queue_response(conn, rcode_not_found, resp_not_found);
+    }
+    if (!record->success1)
+    {
+        return MHD_queue_response(conn, rcode_internal_error, resp_internal_error);
+    }
+
+    twofserver_pass_pending_auth(record);
     return MHD_queue_response(conn, rcode_no_challenge, resp_no_challenge);
 }
 

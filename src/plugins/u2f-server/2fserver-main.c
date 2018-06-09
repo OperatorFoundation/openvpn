@@ -11,6 +11,7 @@
 #include "openvpn-plugin.h"
 #include "comm-2fserver.h"
 #include "2fserver-http.h"
+#include "2fserver-model.h"
 
 static const char program_name[] = "openvpn-2fserver";
 
@@ -18,23 +19,52 @@ static int
 do_auth_request(const char *packet, size_t len, struct msghdr *msg,
                 const char **error)
 {
-    int fd;
+    int fd = -1;
+    int err;
     const char *username;
     const char *password;
+    const char *txn_id_string;
+    struct twofserver_PendingAuth *record;
+    *error = "unknown error";
 
     if (comm_2fserver_parse_packet(packet, len, msg,
-                                   "Fss", &fd, &username, &password))
+                                   "Fsss", &fd, &txn_id_string,
+                                   &username, &password))
     {
+        /* TODO: make sure parse contract ensures that vars are either
+           unset or set to sane values even if parse fails partway through
+        */
         *error = "malformed auth request";
-        return AUTH_RESPONSE_ERROR;
+        goto bad;
+    }
+
+    twofserver_TxnId id;
+    err = twofserver_txn_id_parse(&id, txn_id_string);
+    if (err)
+    {
+        *error = "cannot parse transaction ID";
+        goto bad;
     }
 
     /* The worst password check ever, redux. */
     int ok = (strcmp(username, password) == 0);
     if (!ok)
+    {
+        close(fd);
         return AUTH_RESPONSE_IMMEDIATE_DENY;
-    /* return AUTH_RESPONSE_PENDING; */
-    return AUTH_RESPONSE_IMMEDIATE_PERMIT;
+    }
+
+    /* Leave the fd open for pending resolution. */
+    record = twofserver_new_pending_auth(id);
+    record->success1 = true;
+    record->final_response_fd = fd;
+    twofserver_queue_pending_auth(record);
+    return AUTH_RESPONSE_PENDING;
+
+bad:
+    if (fd != -1)
+        close(fd);
+    return AUTH_RESPONSE_ERROR;
 }
 
 static void

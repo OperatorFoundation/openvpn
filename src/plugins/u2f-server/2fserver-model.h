@@ -12,17 +12,19 @@ typedef struct {
 } twofserver_TxnId;
 
 static inline void
-twofserver_copy_txn_id(twofserver_TxnId *out, const twofserver_TxnId *in)
+twofserver_txn_id_copy(twofserver_TxnId *out, const twofserver_TxnId *in)
 {
     memcpy(out, in, sizeof(twofserver_TxnId));
 }
 
 static inline int
-twofserver_cmp_txn_id(const twofserver_TxnId *a, const twofserver_TxnId *b)
+twofserver_txn_id_cmp(const twofserver_TxnId *a, const twofserver_TxnId *b)
 {
     /* TODO: where's the timing-safe memcmp again? */
     return memcmp(a, b, sizeof(twofserver_TxnId));
 }
+
+int twofserver_txn_id_parse(twofserver_TxnId *out, const char *in);
 
 /* A PendingAuth structure may be owned by the store of pending
    authentications, locked for a particular consumer, or floating.
@@ -32,11 +34,12 @@ twofserver_cmp_txn_id(const twofserver_TxnId *a, const twofserver_TxnId *b)
    transitions are:
      - new_pending_auth() -> floating
      - queue_pending_auth(floating) -> becomes owned
-     - free_pending_auth(floating) -> destroyed
+     - discard_pending_auth(floating) -> destroyed
 
      - lock_pending_auth(id) -> locked
      - unlock_pending_auth(locked) -> becomes owned
-     - destroy_pending_auth(locked) -> destroyed
+     - pass_pending_auth(locked) -> destroyed
+     - fail_pending_auth(locked) -> destroyed
 
    TODO: that free/destroy distinction is kinda terrible
  */
@@ -44,13 +47,23 @@ twofserver_cmp_txn_id(const twofserver_TxnId *a, const twofserver_TxnId *b)
 struct twofserver_PendingAuth {
     twofserver_TxnId txn_id;
     bool locked;
+
+    /* Value is set if success1 is set. File descriptor to
+       auth_control_file from OpenVPN side, or -1 if we've already
+       written the file. */
+    int final_response_fd;
+
+    /* Value is set if success1 is set and final_response_fd is -1.
+       The character we wrote to the auth_control_file, or '\0' if
+       something went wrong. */
+    char final_response_char;
+
+    /* Primary request has been made successfully (OpenVPN side). */
+    bool success1;
+
 #if 0
     char *user;
     struct timespec deadline;
-
-    /* Set if success1 is set. File descriptor to auth_control_file
-       from OpenVPN side. */
-    int final_response_fd;
 
     /* Set if there is a challenge request that's been suspended
        because the primary OpenVPN authentication hasn't arrived
@@ -58,8 +71,6 @@ struct twofserver_PendingAuth {
     struct MHD_Connection *challenge_conn;
     void *challenge_conn_closure;
 
-    /* Primary request has been made successfully (OpenVPN side). */
-    bool success1;
 
     /* Secondary challenge/response passed (2F server side). */
     bool success2;
@@ -78,7 +89,8 @@ enum twofserver_ChallengeResultType {
 };
 
 struct twofserver_PendingAuth *twofserver_new_pending_auth(twofserver_TxnId id);
-void twofserver_free_pending_auth(struct twofserver_PendingAuth *record);
+void twofserver_discard_pending_auth(struct twofserver_PendingAuth *record);
+void twofserver_queue_pending_auth(struct twofserver_PendingAuth *record);
 
 struct twofserver_PendingAuth *twofserver_lock_pending_auth(twofserver_TxnId id);
 void twofserver_unlock_pending_auth(struct twofserver_PendingAuth *record);
@@ -86,7 +98,7 @@ void twofserver_unlock_pending_auth(struct twofserver_PendingAuth *record);
 const char *twofserver_challenge_for_auth(struct twofserver_PendingAuth *record,
                                           enum twofserver_ChallengeResultType *chaltype);
 const char *twofserver_challenge_for_reg(struct twofserver_PendingAuth *record);
-void twofserver_queue_pending_auth(struct twofserver_PendingAuth *record);
+void twofserver_pass_pending_auth(struct twofserver_PendingAuth *record);
 void twofserver_fail_pending_auth(struct twofserver_PendingAuth *record);
 
 #endif /* !TWOFSERVER_STATE_H */

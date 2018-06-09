@@ -3,7 +3,7 @@
 
 #include <inttypes.h>
 
-#define BACKEND_PROTOCOL_VERSION 1
+#define BACKEND_PROTOCOL_VERSION 2
 #define MAX_PACKET_BYTES 1024
 #define MAX_PACKET_FDS 1
 
@@ -13,7 +13,7 @@ enum control_socket_opcode
     OP_TERMINATE_ACK, /* <- */
     OP__INVALID_1,
     OP_INITIALIZED, /* <- (uint8_t proto_version) */
-    OP_AUTH_REQUEST, /* -> (string username, string password) + (fd) */
+    OP_AUTH_REQUEST, /* -> (string txn_id, string username, string password) + (fd) */
     OP_AUTH_RESPONSE, /* <- (uint8_t response) */
     OP_ERROR, /* <-> (string message) */
     OP__INVALID_2,
