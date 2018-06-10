@@ -198,8 +198,8 @@ openvpn_plugin_func_v1(openvpn_plugin_handle_t handle, int type,
     /* password_dup, copy of password_input, really contains
        TXNID:PASSWORD. */
     txn_id_string = password_dup;
-    password_proper = strchr(password_dup, ':');
-    if (!txn_id_string)
+    char *password_separator = strchr(password_dup, ':');
+    if (!password_separator)
     {
         u2f_server_log(ctx, PLOG_ERR,
                        "password input has no txn id separator");
@@ -207,8 +207,8 @@ openvpn_plugin_func_v1(openvpn_plugin_handle_t handle, int type,
     }
 
     /* Mutate the duplicated string to split at the colon. */
-    *password_proper = '\0';
-    password_proper++;
+    *password_separator = '\0';
+    password_proper = password_separator+1;
 
     comm_2fserver_send_packet(ctx->control_socket, OP_AUTH_REQUEST,
                               "Fsss", acf_fd, txn_id_string,
