@@ -1,4 +1,4 @@
-#include "obfs-test.h"
+#include "iris.h"
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
@@ -23,7 +23,7 @@ typedef enum {
 /* must be calloc'able */
 struct io_slot
 {
-    struct obfs_test_context *ctx;
+    struct iris_context *ctx;
     io_slot_status_t status;
     OVERLAPPED overlapped;
     SOCKET socket;
@@ -39,7 +39,7 @@ struct io_slot
 };
 
 static bool
-setup_io_slot(struct io_slot *slot, struct obfs_test_context *ctx,
+setup_io_slot(struct io_slot *slot, struct iris_context *ctx,
               SOCKET socket, HANDLE event)
 {
     slot->ctx = ctx;
@@ -62,7 +62,7 @@ destroy_io_slot(struct io_slot *slot)
                                          TRUE /* wait */, &flags);
         if (!ok && WSAGetLastError() == WSA_IO_INCOMPLETE)
         {
-            obfs_test_log(slot->ctx, PLOG_ERR,
+            iris_log(slot->ctx, PLOG_ERR,
                           "destroying I/O slot: canceled operation is still incomplete after wait?!");
             return false;
         }
@@ -89,10 +89,10 @@ resize_io_buf(struct io_slot *slot, size_t cap)
     slot->buf_cap = cap;
 }
 
-struct obfs_test_socket_win32
+struct iris_socket_win32
 {
     struct openvpn_vsocket_handle handle;
-    struct obfs_test_context *ctx;
+    struct iris_context *ctx;
     SOCKET socket;
 
     /* Write is ready when idle; read is not-ready when idle. Both level-triggered. */
@@ -102,10 +102,10 @@ struct obfs_test_socket_win32
     int last_rwflags;
 };
 
-struct openvpn_vsocket_vtab obfs_test_socket_vtab;
+struct openvpn_vsocket_vtab iris_socket_vtab;
 
 static void
-free_socket(struct obfs_test_socket_win32 *sock)
+free_socket(struct iris_socket_win32 *sock)
 {
     /* This only ever becomes false in strange situations where we leak the entire structure for
        lack of anything else to do. */
@@ -132,7 +132,7 @@ free_socket(struct obfs_test_socket_win32 *sock)
     if (!can_free)
     {
         /* Skip deinitialization of everything else. Doomed. */
-        obfs_test_log(sock->ctx, PLOG_ERR, "doomed, leaking the entire socket structure");
+        iris_log(sock->ctx, PLOG_ERR, "doomed, leaking the entire socket structure");
         return;
     }
 
@@ -145,10 +145,10 @@ free_socket(struct obfs_test_socket_win32 *sock)
 }
 
 static openvpn_vsocket_handle_t
-obfs_test_win32_bind(void *plugin_handle,
+iris_win32_bind(void *plugin_handle,
                      const struct sockaddr *addr, openvpn_vsocket_socklen_t len)
 {
-    struct obfs_test_socket_win32 *sock = NULL;
+    struct iris_socket_win32 *sock = NULL;
 //    struct sockaddr *addr_rev = NULL;
 //
 //    /* TODO: would be nice to factor out some of these sequences */
@@ -156,13 +156,13 @@ obfs_test_win32_bind(void *plugin_handle,
 //    if (!addr_rev)
 //        goto error;
 //    memcpy(addr_rev, addr, len);
-//    obfs_test_munge_addr(addr_rev, len);
+//    iris_munge_addr(addr_rev, len);
 
-    sock = calloc(1, sizeof(struct obfs_test_socket_win32));
+    sock = calloc(1, sizeof(struct iris_socket_win32));
     if (!sock)
         goto error;
-    sock->handle.vtab = &obfs_test_socket_vtab;
-    sock->ctx = (struct obfs_test_context *) plugin_handle;
+    sock->handle.vtab = &iris_socket_vtab;
+    sock->ctx = (struct iris_context *) plugin_handle;
 
     /* Preemptively initialize the members of some Win32 types so error exits are okay later on.
        HANDLEs of NULL are considered invalid per above. */
@@ -193,7 +193,7 @@ obfs_test_win32_bind(void *plugin_handle,
     return &sock->handle;
 
 error:
-    obfs_test_log((struct obfs_test_context *) plugin_handle, PLOG_ERR,
+    iris_log((struct iris_context *) plugin_handle, PLOG_ERR,
                   "bind failure: WSA error = %d", WSAGetLastError());
     free_socket(sock);
     return NULL;
@@ -263,7 +263,7 @@ queue_new_write(struct io_slot *slot)
 }
 
 static void
-ensure_pending_read(struct obfs_test_socket_win32 *sock)
+ensure_pending_read(struct iris_socket_win32 *sock)
 {
     struct io_slot *slot = &sock->slot_read;
     switch (slot->status)
@@ -331,7 +331,7 @@ complete_pending_operation(struct io_slot *slot)
 }
 
 static bool
-complete_pending_read(struct obfs_test_socket_win32 *sock)
+complete_pending_read(struct iris_socket_win32 *sock)
 {
     bool done = complete_pending_operation(&sock->slot_read);
     if (done)
@@ -340,7 +340,7 @@ complete_pending_read(struct obfs_test_socket_win32 *sock)
 }
 
 static void
-consumed_pending_read(struct obfs_test_socket_win32 *sock)
+consumed_pending_read(struct iris_socket_win32 *sock)
 {
     struct io_slot *slot = &sock->slot_read;
     assert(slot->status == IO_SLOT_COMPLETE);
@@ -350,7 +350,7 @@ consumed_pending_read(struct obfs_test_socket_win32 *sock)
 }
 
 static inline bool
-complete_pending_write(struct obfs_test_socket_win32 *sock)
+complete_pending_write(struct iris_socket_win32 *sock)
 {
     bool done = complete_pending_operation(&sock->slot_write);
     if (done)
@@ -359,11 +359,11 @@ complete_pending_write(struct obfs_test_socket_win32 *sock)
 }
 
 static void
-obfs_test_win32_request_event(openvpn_vsocket_handle_t handle,
+iris_win32_request_event(openvpn_vsocket_handle_t handle,
                               openvpn_vsocket_event_set_handle_t event_set, unsigned rwflags)
 {
-    struct obfs_test_socket_win32 *sock = (struct obfs_test_socket_win32 *)handle;
-    obfs_test_log(sock->ctx, PLOG_DEBUG, "request-event: %d", rwflags);
+    struct iris_socket_win32 *sock = (struct iris_socket_win32 *)handle;
+    iris_log(sock->ctx, PLOG_DEBUG, "request-event: %d", rwflags);
     sock->last_rwflags = 0;
 
     if (rwflags & OPENVPN_VSOCKET_EVENT_READ)
@@ -373,20 +373,20 @@ obfs_test_win32_request_event(openvpn_vsocket_handle_t handle,
 }
 
 static bool
-obfs_test_win32_update_event(openvpn_vsocket_handle_t handle, void *arg, unsigned rwflags)
+iris_win32_update_event(openvpn_vsocket_handle_t handle, void *arg, unsigned rwflags)
 {
-    obfs_test_log(((struct obfs_test_socket_win32 *) handle)->ctx, PLOG_DEBUG,
+    iris_log(((struct iris_socket_win32 *) handle)->ctx, PLOG_DEBUG,
                   "update-event: %p, %p, %d", handle, arg, rwflags);
     if (arg != handle)
         return false;
-    ((struct obfs_test_socket_win32 *) handle)->last_rwflags |= rwflags;
+    ((struct iris_socket_win32 *) handle)->last_rwflags |= rwflags;
     return true;
 }
 
 static unsigned
-obfs_test_win32_pump(openvpn_vsocket_handle_t handle)
+iris_win32_pump(openvpn_vsocket_handle_t handle)
 {
-    struct obfs_test_socket_win32 *sock = (struct obfs_test_socket_win32 *)handle;
+    struct iris_socket_win32 *sock = (struct iris_socket_win32 *)handle;
     unsigned result = 0;
 
     if ((sock->last_rwflags & OPENVPN_VSOCKET_EVENT_READ) && complete_pending_read(sock))
@@ -395,15 +395,15 @@ obfs_test_win32_pump(openvpn_vsocket_handle_t handle)
         (sock->slot_write.status != IO_SLOT_PENDING || complete_pending_write(sock)))
         result |= OPENVPN_VSOCKET_EVENT_WRITE;
 
-    obfs_test_log(sock->ctx, PLOG_DEBUG, "pump -> %d", result);
+    iris_log(sock->ctx, PLOG_DEBUG, "pump -> %d", result);
     return result;
 }
 
 static ssize_t
-obfs_test_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
+iris_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
                          struct sockaddr *addr, openvpn_vsocket_socklen_t *addrlen)
 {
-    struct obfs_test_socket_win32 *sock = (struct obfs_test_socket_win32 *)handle;
+    struct iris_socket_win32 *sock = (struct iris_socket_win32 *)handle;
     if (!complete_pending_read(sock))
     {
         WSASetLastError(WSA_IO_INCOMPLETE);
@@ -421,7 +421,7 @@ obfs_test_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
     /* sock->slot_read now has valid data. */
     char *working_buf = sock->slot_read.buf;
     ssize_t working_len = working_buf.len
-    // ssize_t unmunged_len = obfs_test_unmunge_buf(working_buf, sock->slot_read.buf_len);
+    // ssize_t unmunged_len = iris_unmunge_buf(working_buf, sock->slot_read.buf_len);
     if (working_len < 0)
     {
         /* Act as though this read never happened. Assume one was queued before, so it should
@@ -445,7 +445,7 @@ obfs_test_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
     memcpy(addr, &sock->slot_read.addr, addr_copy_len);
     *addrlen = addr_copy_len;
 //    if (addr_copy_len > 0)
-//        obfs_test_munge_addr(addr, addr_copy_len);
+//        iris_munge_addr(addr, addr_copy_len);
 
     /* Reset the I/O slot before returning. */
     consumed_pending_read(sock);
@@ -453,10 +453,10 @@ obfs_test_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
 }
 
 static ssize_t
-obfs_test_win32_sendto(openvpn_vsocket_handle_t handle, const void *buf, size_t len,
+iris_win32_sendto(openvpn_vsocket_handle_t handle, const void *buf, size_t len,
                        const struct sockaddr *addr, openvpn_vsocket_socklen_t addrlen)
 {
-    struct obfs_test_socket_win32 *sock = (struct obfs_test_socket_win32 *)handle;
+    struct iris_socket_win32 *sock = (struct iris_socket_win32 *)handle;
     complete_pending_write(sock);
 
     if (sock->slot_write.status == IO_SLOT_PENDING)
@@ -477,11 +477,11 @@ obfs_test_win32_sendto(openvpn_vsocket_handle_t handle, const void *buf, size_t 
     memcpy(&sock->slot_write.addr, addr, addrlen);
     sock->slot_write.addr_len = addrlen;
 //    if (addrlen > 0)
-//        obfs_test_munge_addr((struct sockaddr *)&sock->slot_write.addr, addrlen);
+//        iris_munge_addr((struct sockaddr *)&sock->slot_write.addr, addrlen);
     
-//    resize_io_buf(&sock->slot_write, obfs_test_max_munged_buf_size(len));
+//    resize_io_buf(&sock->slot_write, iris_max_munged_buf_size(len));
     
-//    sock->slot_write.buf_len = obfs_test_munge_buf(sock->slot_write.buf, buf, len);
+//    sock->slot_write.buf_len = iris_munge_buf(sock->slot_write.buf, buf, len);
     sock->slot_write.buf_len = len
     
     queue_new_write(&sock->slot_write);
@@ -509,19 +509,19 @@ obfs_test_win32_sendto(openvpn_vsocket_handle_t handle, const void *buf, size_t 
 }
 
 static void
-obfs_test_win32_close(openvpn_vsocket_handle_t handle)
+iris_win32_close(openvpn_vsocket_handle_t handle)
 {
-    free_socket((struct obfs_test_socket_win32 *) handle);
+    free_socket((struct iris_socket_win32 *) handle);
 }
 
 void
-obfs_test_initialize_socket_vtab(void)
+iris_initialize_socket_vtab(void)
 {
-    obfs_test_socket_vtab.bind = obfs_test_win32_bind;
-    obfs_test_socket_vtab.request_event = obfs_test_win32_request_event;
-    obfs_test_socket_vtab.update_event = obfs_test_win32_update_event;
-    obfs_test_socket_vtab.pump = obfs_test_win32_pump;
-    obfs_test_socket_vtab.recvfrom = obfs_test_win32_recvfrom;
-    obfs_test_socket_vtab.sendto = obfs_test_win32_sendto;
-    obfs_test_socket_vtab.close = obfs_test_win32_close;
+    iris_socket_vtab.bind = iris_win32_bind;
+    iris_socket_vtab.request_event = iris_win32_request_event;
+    iris_socket_vtab.update_event = iris_win32_update_event;
+    iris_socket_vtab.pump = iris_win32_pump;
+    iris_socket_vtab.recvfrom = iris_win32_recvfrom;
+    iris_socket_vtab.sendto = iris_win32_sendto;
+    iris_socket_vtab.close = iris_win32_close;
 }

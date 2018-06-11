@@ -215,10 +215,17 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
-	[plugin-obfs-test],
-	[AS_HELP_STRING([--disable-plugin-obfs-test], [disable obfs-test plugin @<:@default=platform specific@:>@])],
+	[plugin-transport-skeleton],
+	[AS_HELP_STRING([--disable-plugin-transport-skeleton], [disable transport-skeleton plugin @<:@default=platform specific@:>@])],
 	,
-	[enable_plugin_obfs_test="no"]
+	[enable_plugin_transport_skeleton="no"]
+)
+
+AC_ARG_ENABLE(
+    [plugin-iris],
+    [AS_HELP_STRING([--disable-plugin-iris], [disable iris plugin @<:@default=platform specific@:>@])],
+    ,
+    [enable_plugin_iris="no"]
 )
 
 AC_ARG_ENABLE(
@@ -1324,7 +1331,8 @@ AM_CONDITIONAL([WIN32], [test "${WIN32}" = "yes"])
 AM_CONDITIONAL([GIT_CHECKOUT], [test "${GIT_CHECKOUT}" = "yes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_AUTH_PAM], [test "${enable_plugin_auth_pam}" = "yes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_DOWN_ROOT], [test "${enable_plugin_down_root}" = "yes"])
-AM_CONDITIONAL([ENABLE_PLUGIN_OBFS_TEST], [test "${enable_plugin_obfs_test}" = "yes"])
+AM_CONDITIONAL([ENABLE_PLUGIN_iris], [test "${enable_plugin_iris}" = "yes"])
+AM_CONDITIONAL([ENABLE_PLUGIN_transport_skeleton], [test "${enable_plugin_transport_skeleton}" = "yes"])
 AM_CONDITIONAL([ENABLE_CRYPTO], [test "${enable_crypto}" = "yes"])
 AM_CONDITIONAL([HAVE_LD_WRAP_SUPPORT], [test "${have_ld_wrap_support}" = "yes"])
 
@@ -1363,6 +1371,9 @@ else
    AM_CONDITIONAL([CMOCKA_INITIALIZED], [false])
 fi
 
+# Include the Sodium Library
+ss_SODIUM
+
 
 AC_CONFIG_FILES([
 	version.sh
@@ -1382,14 +1393,15 @@ AC_CONFIG_FILES([
 	src/plugins/Makefile
 	src/plugins/auth-pam/Makefile
 	src/plugins/down-root/Makefile
-        src/plugins/obfs-test/Makefile
+    src/plugins/transport-skeleton/Makefile
+    src/plugins/iris/Makefile
 	tests/Makefile
-        tests/unit_tests/Makefile
-        tests/unit_tests/example_test/Makefile
-        tests/unit_tests/openvpn/Makefile
-        tests/unit_tests/plugins/Makefile
-        tests/unit_tests/plugins/auth-pam/Makefile
-        vendor/Makefile
+    tests/unit_tests/Makefile
+    tests/unit_tests/example_test/Makefile
+    tests/unit_tests/openvpn/Makefile
+    tests/unit_tests/plugins/Makefile
+    tests/unit_tests/plugins/auth-pam/Makefile
+    vendor/Makefile
 	sample/Makefile
 	doc/Makefile
 ])

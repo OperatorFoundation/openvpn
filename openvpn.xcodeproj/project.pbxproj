@@ -8,9 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		4634A43720C1DCF40060669A /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 4634A43620C1DCF40060669A /* main.c */; };
-		4634A45720C1DD230060669A /* obfs-test.c in Sources */ = {isa = PBXBuildFile; fileRef = 4634A43D20C1DD220060669A /* obfs-test.c */; };
-		4634A45820C1DD230060669A /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = 4634A43E20C1DD220060669A /* Makefile */; };
-		4634A45A20C1DD230060669A /* obfs-test-posix.c in Sources */ = {isa = PBXBuildFile; fileRef = 4634A44020C1DD220060669A /* obfs-test-posix.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -28,19 +25,12 @@
 /* Begin PBXFileReference section */
 		4634A42B20C1DC7D0060669A /* openvpn */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = openvpn; sourceTree = BUILT_PRODUCTS_DIR; };
 		4634A43620C1DCF40060669A /* main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
-		4634A43D20C1DD220060669A /* obfs-test.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "obfs-test.c"; sourceTree = "<group>"; };
-		4634A43E20C1DD220060669A /* Makefile */ = {isa = PBXFileReference; explicitFileType = text; fileEncoding = 4; path = Makefile; sourceTree = "<group>"; };
-		4634A44020C1DD220060669A /* obfs-test-posix.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "obfs-test-posix.c"; sourceTree = "<group>"; };
-		4634A44120C1DD220060669A /* obfs-test.exports */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "obfs-test.exports"; sourceTree = "<group>"; };
-		4634A44320C1DD220060669A /* README.obfs-test */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "README.obfs-test"; sourceTree = "<group>"; };
-		4634A44420C1DD220060669A /* obfs-test-win32.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = "obfs-test-win32.c"; sourceTree = "<group>"; };
-		4634A44520C1DD220060669A /* obfs-test.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "obfs-test.h"; sourceTree = "<group>"; };
-		4634A45420C1DD220060669A /* Makefile.in */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Makefile.in; sourceTree = "<group>"; };
 		4634A46220C1DD6C0060669A /* openvpn-vsocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "openvpn-vsocket.h"; path = "include/openvpn-vsocket.h"; sourceTree = "<group>"; };
 		4634A46320C1DD6C0060669A /* openvpn-plugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "openvpn-plugin.h"; path = "include/openvpn-plugin.h"; sourceTree = "<group>"; };
 		4634A46720C84EE30060669A /* 1.0.16 */ = {isa = PBXFileReference; lastKnownFileType = folder; name = 1.0.16; path = ../../../../../usr/local/Cellar/libsodium/1.0.16; sourceTree = "<group>"; };
-		4634A46820C852F70060669A /* Makefile.am */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Makefile.am; sourceTree = "<group>"; };
 		4634A46920C854350060669A /* configure.ac */ = {isa = PBXFileReference; explicitFileType = text.script; fileEncoding = 4; path = configure.ac; sourceTree = SOURCE_ROOT; };
+		4634A4B020C884E80060669A /* plugins */ = {isa = PBXFileReference; lastKnownFileType = folder; name = plugins; path = src/plugins; sourceTree = "<group>"; };
+		46A5A26B20CEEEF20001C78E /* m4 */ = {isa = PBXFileReference; lastKnownFileType = folder; path = m4; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -57,11 +47,12 @@
 		4634A42220C1DC7D0060669A = {
 			isa = PBXGroup;
 			children = (
+				46A5A26B20CEEEF20001C78E /* m4 */,
+				4634A4B020C884E80060669A /* plugins */,
 				4634A46720C84EE30060669A /* 1.0.16 */,
 				4634A46920C854350060669A /* configure.ac */,
 				4634A46320C1DD6C0060669A /* openvpn-plugin.h */,
 				4634A46220C1DD6C0060669A /* openvpn-vsocket.h */,
-				4634A43820C1DD220060669A /* obfs-test */,
 				4634A43520C1DCF40060669A /* openVPNXCode */,
 				4634A42C20C1DC7D0060669A /* Products */,
 			);
@@ -82,23 +73,6 @@
 			);
 			path = openVPNXCode;
 			sourceTree = "<group>";
-		};
-		4634A43820C1DD220060669A /* obfs-test */ = {
-			isa = PBXGroup;
-			children = (
-				4634A44520C1DD220060669A /* obfs-test.h */,
-				4634A43D20C1DD220060669A /* obfs-test.c */,
-				4634A44020C1DD220060669A /* obfs-test-posix.c */,
-				4634A44420C1DD220060669A /* obfs-test-win32.c */,
-				4634A44120C1DD220060669A /* obfs-test.exports */,
-				4634A43E20C1DD220060669A /* Makefile */,
-				4634A46820C852F70060669A /* Makefile.am */,
-				4634A45420C1DD220060669A /* Makefile.in */,
-				4634A44320C1DD220060669A /* README.obfs-test */,
-			);
-			name = "obfs-test";
-			path = "src/plugins/obfs-test";
-			sourceTree = SOURCE_ROOT;
 		};
 /* End PBXGroup section */
 
@@ -156,10 +130,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4634A45820C1DD230060669A /* Makefile in Sources */,
-				4634A45A20C1DD230060669A /* obfs-test-posix.c in Sources */,
 				4634A43720C1DCF40060669A /* main.c in Sources */,
-				4634A45720C1DD230060669A /* obfs-test.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
