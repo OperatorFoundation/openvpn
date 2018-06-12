@@ -71,10 +71,10 @@ struct u2fdbt_Record {
      */
     const char *pw_digest;
 
-    /* Unix timestamp of last password change. */
+    /* Unix timestamp of last password change, or 0 for unknown. */
     int64_t pw_mtime;
 
-    /* Unix timestamp of last update to this record. */
+    /* Unix timestamp of last update to this record, or 0 for unknown. */
     int64_t record_mtime;
 
     /* Inclusive-or of flag bits above. */
@@ -94,6 +94,8 @@ struct u2fdbt_Record {
 };
 
 struct u2fdbt_Record *u2fdbt_record_dup(const struct u2fdbt_Record *record);
+
+/* TODO: u2fdbt_check_password */
 
 /* Open a U2FDBT database at PATH, initially for reading only. The
    underlying file must not be modified in-place while it is open;
