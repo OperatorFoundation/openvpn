@@ -298,6 +298,8 @@ openvpn_plugin_close_v1(openvpn_plugin_handle_t handle)
 
     if (ctx->control_socket != -1)
     {
+        u2f_server_log(ctx, PLOG_WARN, "close: sending SIGTERM to 2fserver pid %d",
+                       ctx->child);
         close(ctx->control_socket);
         kill(ctx->child, SIGTERM);
         /* TODO: waitpid loop */
@@ -315,6 +317,8 @@ openvpn_plugin_abort_v1(openvpn_plugin_handle_t handle)
 
     if (ctx->control_socket != -1)
     {
+        u2f_server_log(ctx, PLOG_WARN, "abort: sending SIGTERM to 2fserver pid %d",
+                       ctx->child);
         close(ctx->control_socket);
         kill(ctx->child, SIGTERM);
         /* TODO: waitpid loop */
