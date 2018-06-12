@@ -109,26 +109,15 @@ control_loop(int sock)
                 /* return rather than break, to exit loop. */
                 return;
             case OP_AUTH_REQUEST:
+                error = NULL;
                 result = do_auth_request(packet, (size_t)len, &msg, &error);
-                switch (result)
+                if (result == AUTH_RESPONSE_ERROR && error)
                 {
-                    case AUTH_RESPONSE_IMMEDIATE_PERMIT:
-                        comm_2fserver_send_packet(sock, OP_AUTH_RESPONSE, "b",
-                                                  OPENVPN_PLUGIN_FUNC_SUCCESS);
-                        break;
-                    case AUTH_RESPONSE_PENDING:
-                        comm_2fserver_send_packet(sock, OP_AUTH_RESPONSE, "b",
-                                                  OPENVPN_PLUGIN_FUNC_DEFERRED);
-                        break;
-                    case AUTH_RESPONSE_IMMEDIATE_DENY:
-                        comm_2fserver_send_packet(sock, OP_AUTH_RESPONSE, "b",
-                                                  OPENVPN_PLUGIN_FUNC_ERROR);
-                        break;
-                    case AUTH_RESPONSE_ERROR:
-                        comm_2fserver_send_error(sock, error);
-                        break;
-                    default:
-                        abort();
+                    comm_2fserver_send_error(sock, error);
+                }
+                else
+                {
+                    comm_2fserver_send_packet(sock, OP_AUTH_RESPONSE, "b", result);
                 }
                 break;
             default:
