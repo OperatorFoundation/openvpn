@@ -110,7 +110,7 @@ openvpn_plugin_open_v3(int version,
     else
     {
         /* In main process. */
-        u2f_server_log(ctx, PLOG_NOTE, "launched 2fserver with PID %d", child);
+        u2f_server_log(ctx, PLOG_NOTE, "started 2fserver with PID %d", child);
         close(control_socket[1]);
         control_socket[1] = -1;
         err = wait_child_init(control_socket[0]);
@@ -298,7 +298,7 @@ openvpn_plugin_close_v1(openvpn_plugin_handle_t handle)
 
     if (ctx->control_socket != -1)
     {
-        u2f_server_log(ctx, PLOG_WARN, "close: sending SIGTERM to 2fserver pid %d",
+        u2f_server_log(ctx, PLOG_NOTE, "stopping 2fserver with PID %d, sending SIGTERM",
                        ctx->child);
         close(ctx->control_socket);
         kill(ctx->child, SIGTERM);
@@ -317,7 +317,7 @@ openvpn_plugin_abort_v1(openvpn_plugin_handle_t handle)
 
     if (ctx->control_socket != -1)
     {
-        u2f_server_log(ctx, PLOG_WARN, "abort: sending SIGTERM to 2fserver pid %d",
+        u2f_server_log(ctx, PLOG_NOTE, "stopping 2fserver with PID %d, sending SIGTERM",
                        ctx->child);
         close(ctx->control_socket);
         kill(ctx->child, SIGTERM);
