@@ -31,3 +31,8 @@ To invoke this plugin, load it via an appropriate plugin line in the
 configuration file, and then specify 'proto indirect' rather than any
 other protocol.
 
+We have provided an example config file for your use. The 'proto indirect' line is already set correctly in this file. However, it will still need to be modified in the following ways:
+
+1) Update the line 'remote host_address': replace 'host_address' with the actual server IP.
+2) Update the plugin line: replace '/usr/local/lib/openvpn/plugins/openvpn-plugin-iris.so' with the correct path and replace 'password' with your actual password.
+
