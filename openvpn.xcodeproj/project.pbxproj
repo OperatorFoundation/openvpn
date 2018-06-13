@@ -172,7 +172,7 @@
 		4613222820D07DD00076AC28 /* libsodium.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libsodium.dylib; sourceTree = "<group>"; };
 		4613222920D07DD00076AC28 /* libsodium.23.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libsodium.23.dylib; sourceTree = "<group>"; };
 		4613222A20D07DD00076AC28 /* libsodium.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libsodium.a; sourceTree = "<group>"; };
-		4613222E20D1915E0076AC28 /* example.ovpn */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = example.ovpn; sourceTree = "<group>"; };
+		4613222E20D1915E0076AC28 /* example_iris_config.ovpn */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = example_iris_config.ovpn; sourceTree = "<group>"; };
 		4634A42B20C1DC7D0060669A /* openvpn */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = openvpn; sourceTree = BUILT_PRODUCTS_DIR; };
 		4634A43620C1DCF40060669A /* main.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		4634A46220C1DD6C0060669A /* openvpn-vsocket.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "openvpn-vsocket.h"; path = "include/openvpn-vsocket.h"; sourceTree = "<group>"; };
@@ -232,7 +232,6 @@
 		46131F4320D07C850076AC28 /* plugins */ = {
 			isa = PBXGroup;
 			children = (
-				4613222E20D1915E0076AC28 /* example.ovpn */,
 				46131F5620D07C850076AC28 /* iris */,
 				46131F7020D07C850076AC28 /* transport-skeleton */,
 				46131F8A20D07C850076AC28 /* Makefile */,
@@ -245,6 +244,7 @@
 		46131F5620D07C850076AC28 /* iris */ = {
 			isa = PBXGroup;
 			children = (
+				4613222E20D1915E0076AC28 /* example_iris_config.ovpn */,
 				46131F5920D07C850076AC28 /* iris.h */,
 				46131F6220D07C850076AC28 /* iris.c */,
 				46131F5D20D07C850076AC28 /* iris-posix.c */,
