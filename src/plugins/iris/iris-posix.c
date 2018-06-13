@@ -59,8 +59,8 @@ iris_posix_bind(void *plugin_handle,
 {
     struct iris_context *context = (struct iris_context *)plugin_handle;
     struct iris_socket_posix *sock = NULL;
-    unsigned char salt[crypto_pwhash_SALTBYTES];
     const char *password = context->password;
+    const unsigned char *salt = (const unsigned char *)context->salt;
     
     sock = calloc(1, sizeof(struct iris_socket_posix));
     

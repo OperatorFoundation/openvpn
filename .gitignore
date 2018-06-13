@@ -93,3 +93,4 @@ xcuserdata/
 !*.xcworkspace/contents.xcworkspacedata
 /*.gcno
 openVPNXCode/main.c
+oh_iris_config.ovpn

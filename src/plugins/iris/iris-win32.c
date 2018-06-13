@@ -201,8 +201,8 @@ iris_win32_bind(void *plugin_handle,
 {
     struct iris_socket_win32 *sock = NULL;
     struct iris_context *context = (struct iris_context *)plugin_handle;
-    unsigned char salt[crypto_pwhash_SALTBYTES];
     const char *password = context->password;
+    const unsigned char *salt = (const unsigned char *)context->salt;
     
 //    struct sockaddr *addr_rev = NULL;
 //

@@ -4,6 +4,7 @@
 #include "openvpn-plugin.h"
 #include "openvpn-vsocket.h"
 #include "iris.h"
+#include "sodium.h"
 
 struct openvpn_vsocket_vtab iris_socket_vtab = { NULL };
 
@@ -31,6 +32,16 @@ OPENVPN_EXPORT int
 openvpn_plugin_open_v3(int version, struct openvpn_plugin_args_open_in const *args,
                        struct openvpn_plugin_args_open_return *out)
 {
+    const char *password = args->argv[1];
+    const char *salt = args->argv[2];
+    
+    //FIXME: Salt should be a randomly generated data
+    // Sodium requires the salt to be a specific size
+    if (strlen(salt) != crypto_pwhash_SALTBYTES)
+    {
+        return OPENVPN_PLUGIN_FUNC_ERROR;
+    }
+    
     // This is just setting up the context
     // Currently context only does logging to OpenVPN
     struct iris_context *context;
@@ -58,10 +69,9 @@ openvpn_plugin_open_v3(int version, struct openvpn_plugin_args_open_in const *ar
     // Gives OpenVPN the handle object to save and later give back to us in other calls
     out->handle = (openvpn_plugin_handle_t *) context;
     
-    // Get the password from the config file
-    const char *password = args->argv[1];
     context->password = (char *)password;
-    
+    context->salt = (char *)salt;
+
     return OPENVPN_PLUGIN_FUNC_SUCCESS;
 }
 

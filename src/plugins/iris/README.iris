@@ -27,12 +27,22 @@ In a terminal window, from the main openvpn directory, type the following comman
 
 USAGE
 
-To invoke this plugin, load it via an appropriate plugin line in the
-configuration file, and then specify 'proto indirect' rather than any
-other protocol.
+To invoke this plugin, load it via an appropriate plugin line in the configuration file, and then specify 'proto indirect' rather than any other protocol.
 
 We have provided an example config file for your use. The 'proto indirect' line is already set correctly in this file. However, it will still need to be modified in the following ways:
 
-1) Update the line 'remote host_address': replace 'host_address' with the actual server IP.
-2) Update the plugin line: replace '/usr/local/lib/openvpn/plugins/openvpn-plugin-iris.so' with the correct path and replace 'password' with your actual password.
+1) Update the 'plugin' line: replace 'openvpn-plugin-iris.so' with the complete path, replace 'password' with your actual password, and 'salt' with your 16 byte salt.
+
+    *Salt must be exactly 16 bytes.
+    **Because salt is entered as a string the salt does not have maximum possible entropy. This is not critical for this use case.
+
+2) Update the line 'remote host_address': replace 'host_address' with the actual server IP.
+
+3) Update the 'ca ca.cert' line with the complete path to your ca.cert file instead of just the file name.
+
+4) Update the 'cert client1.cert' line with the complete path to your client1.cert file.
+
+5) Update the 'key client1.key' line with the complete path to your client1.key file.
+
+6) Update the 'tls-auth ta.key 1' line with the complete path to your ta.key file.
 

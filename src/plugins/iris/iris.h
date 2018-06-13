@@ -10,6 +10,7 @@ struct iris_context
 {
     struct openvpn_plugin_callbacks *global_vtab;
     char *password;
+    char *salt;
 };
 
 extern struct openvpn_vsocket_vtab iris_socket_vtab;
