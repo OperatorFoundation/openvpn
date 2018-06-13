@@ -7,6 +7,9 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include "sodium.h"
+
+#define RANDOM_NUMBER_BUFFER_SIZE 4096
 
 struct iris_socket_posix
 {
@@ -14,6 +17,9 @@ struct iris_socket_posix
     struct iris_context *ctx;
     int fd;
     unsigned last_rwflags;
+    unsigned char *seed;
+    unsigned char *random_number_buffer;
+    unsigned int random_number_buffer_offset;
 };
 
 static void
@@ -21,20 +27,69 @@ free_socket(struct iris_socket_posix *sock)
 {
     if (!sock)
         return;
+    
     if (sock->fd != -1)
         close(sock->fd);
+    
+    free(sock->seed);
+    free(sock->random_number_buffer);
     free(sock);
+}
+
+static void
+iris_posix_create_random_number(struct iris_socket_posix *sock)
+{
+    unsigned char *temp_random_number_buffer;
+    sock->random_number_buffer_offset = 0;
+
+    // Everytime the random number is generated instead of putting it in the buffer directly put it in a temp buffer that is 2x the size needed.
+    temp_random_number_buffer = calloc(1, RANDOM_NUMBER_BUFFER_SIZE * 2);
+    randombytes_buf_deterministic(temp_random_number_buffer, RANDOM_NUMBER_BUFFER_SIZE * 2, sock->seed);
+    
+    // Copy (memcpy) the first half into the seed and the second half into the random number buffer
+    memcpy(sock->seed, temp_random_number_buffer, RANDOM_NUMBER_BUFFER_SIZE);
+    memcpy(sock->random_number_buffer, &temp_random_number_buffer[RANDOM_NUMBER_BUFFER_SIZE], RANDOM_NUMBER_BUFFER_SIZE);
+    
+    free(temp_random_number_buffer);
 }
 
 static openvpn_vsocket_handle_t
 iris_posix_bind(void *plugin_handle,
                      const struct sockaddr *addr, socklen_t len)
 {
+    struct iris_context *context = (struct iris_context *)plugin_handle;
     struct iris_socket_posix *sock = NULL;
-
+    unsigned char salt[crypto_pwhash_SALTBYTES];
+    const char *password = context->password;
+    
     sock = calloc(1, sizeof(struct iris_socket_posix));
+    
     if (!sock)
+    {
         goto error;
+    }
+    
+    // Create and assign seed to sock->seed
+    //FIXME: Needs salt
+    sock->seed = calloc(1, randombytes_SEEDBYTES);
+    sock->random_number_buffer = calloc(1, RANDOM_NUMBER_BUFFER_SIZE);
+    
+    int pwhash_result = crypto_pwhash(sock->seed,
+                                      randombytes_SEEDBYTES,
+                                      password,
+                                      strlen(password),
+                                      salt,
+                                      crypto_pwhash_OPSLIMIT_INTERACTIVE,
+                                      crypto_pwhash_MEMLIMIT_INTERACTIVE,
+                                      crypto_pwhash_ALG_DEFAULT);
+    if (pwhash_result != 0)
+    {
+        /* out of memory */
+        goto error;
+    }
+    
+    // Creates random numbers and assigns to the random_number_buffer and seed
+    iris_posix_create_random_number(sock);
     
     sock->handle.vtab = &iris_socket_vtab;
     sock->ctx = (struct iris_context *) plugin_handle;
@@ -59,6 +114,8 @@ error:
     free_socket(sock);
     return NULL;
 }
+
+
 
 // What OpenVPN is requesting to be notified of
 static void
@@ -96,13 +153,39 @@ iris_posix_pump(openvpn_vsocket_handle_t handle)
     return ((struct iris_socket_posix *) handle)->last_rwflags;
 }
 
+//Decrypt/Encrypt
+static void
+iris_posix_transform_data(openvpn_vsocket_handle_t handle, void *buf, ssize_t number_of_bytes_read)
+{
+    struct iris_socket_posix *posix_sock = (struct iris_socket_posix *) handle;
+    char *buffer = (char *)buf;
+    
+    // For each byte in buf XOR with offset number in random_number_buffer
+    for (int counter = 0; counter < number_of_bytes_read; counter++)
+    {
+        buffer[counter] = posix_sock->random_number_buffer[posix_sock->random_number_buffer_offset] ^ buffer[counter];
+        
+        // Increase the offset by one
+        posix_sock->random_number_buffer_offset++;
+        
+        // Check that the offset isn't beyond the scope of the random number
+        if (posix_sock->random_number_buffer_offset >= RANDOM_NUMBER_BUFFER_SIZE)
+        {
+            // Generate a new random number if the last was used up
+            iris_posix_create_random_number(posix_sock);
+        }
+    }
+}
+
 // Receive Data from the other side
 static ssize_t
 iris_posix_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
                          struct sockaddr *addr, socklen_t *addrlen)
 {
+    struct iris_socket_posix *posix_sock = (struct iris_socket_posix *) handle;
+    
     // Our Socket
-    int fd = ((struct iris_socket_posix *) handle)->fd;
+    int fd = posix_sock->fd;
     ssize_t number_of_bytes_read;
 
     // number_of_bytes_read returns the number of bytes that were read
@@ -117,8 +200,11 @@ iris_posix_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
         ((struct iris_socket_posix *) handle)->last_rwflags &= ~OPENVPN_VSOCKET_EVENT_READ;
     }
 
-    iris_log(((struct iris_socket_posix *) handle)->ctx,
+    iris_log(posix_sock->ctx,
                   PLOG_DEBUG, "recvfrom(%d) -> %d", (int)len, (int)number_of_bytes_read);
+    
+    // Decrypts data previously encrypted
+    iris_posix_transform_data(handle, buf, number_of_bytes_read);
     
     return number_of_bytes_read;
 }
@@ -146,6 +232,9 @@ iris_posix_sendto(openvpn_vsocket_handle_t handle, const void *buf, size_t len,
     
     iris_log(((struct iris_socket_posix *) handle)->ctx,
                   PLOG_DEBUG, "sendto(%d) -> %d", (int)len, (int)number_of_characters_sent);
+    
+    //Encrypts Data
+    iris_posix_transform_data(handle, buf, number_of_characters_sent);
 
     return number_of_characters_sent;
 

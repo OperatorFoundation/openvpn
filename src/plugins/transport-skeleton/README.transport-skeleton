@@ -1,8 +1,5 @@
 transport-skeleton
 
-REQUIREMENTS
-
-It is necessary to have pkg-config installed.
 
 ADDING YOUR TRANSPORT
 

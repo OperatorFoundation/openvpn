@@ -7,11 +7,6 @@
 
 struct openvpn_vsocket_vtab iris_socket_vtab = { NULL };
 
-struct iris_context
-{
-    struct openvpn_plugin_callbacks *global_vtab;
-};
-
 static void
 free_context(struct iris_context *context)
 {
@@ -46,6 +41,14 @@ openvpn_plugin_open_v3(int version, struct openvpn_plugin_args_open_in const *ar
 
     context->global_vtab = args->callbacks;
     
+    // Initialize the libsodium library
+    if (sodium_init() < 0)
+    {
+        iris_log(context, PLOG_ERR, "Sodium could not be initialized.");
+        
+        return OPENVPN_PLUGIN_FUNC_ERROR;
+    }
+    
     // Sets up the VTable, useful stuff
     iris_initialize_socket_vtab();
 
@@ -55,11 +58,11 @@ openvpn_plugin_open_v3(int version, struct openvpn_plugin_args_open_in const *ar
     // Gives OpenVPN the handle object to save and later give back to us in other calls
     out->handle = (openvpn_plugin_handle_t *) context;
     
+    // Get the password from the config file
+    const char *password = args->argv[1];
+    context->password = (char *)password;
+    
     return OPENVPN_PLUGIN_FUNC_SUCCESS;
-
-//err:
-//    free_context(context);
-//    return OPENVPN_PLUGIN_FUNC_ERROR;
 }
 
 OPENVPN_EXPORT void

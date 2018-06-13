@@ -6,6 +6,7 @@
 #include <windows.h>
 #include <winsock2.h>
 #include <assert.h>
+#include "sodium.h"
 
 static inline bool
 is_invalid_handle(HANDLE h)
@@ -91,6 +92,9 @@ resize_io_buf(struct io_slot *slot, size_t cap)
 
 struct iris_socket_win32
 {
+    unsigned char *seed;
+    unsigned char *random_number_buffer;
+    unsigned int random_number_buffer_offset;
     struct openvpn_vsocket_handle handle;
     struct iris_context *ctx;
     SOCKET socket;
@@ -141,7 +145,54 @@ free_socket(struct iris_socket_win32 *sock)
     if (!is_invalid_handle(sock->completion_events.write))
         CloseHandle(sock->completion_events.write);
 
+    free(sock->seed);
+    free(sock->random_number_buffer);
     free(sock);
+}
+
+// Random number and seed
+static void
+iris_win32_create_random_number(struct iris_socket_win32 *sock)
+{
+    unsigned char *temp_random_number_buffer;
+    sock->random_number_buffer_offset = 0;
+    
+    // Everytime the random number is generated instead of putting it in the buffer directly put it in a temp buffer that is 2x the size needed.
+    temp_random_number_buffer = calloc(1, RANDOM_NUMBER_BUFFER_SIZE * 2);
+    randombytes_buf_deterministic(temp_random_number_buffer, RANDOM_NUMBER_BUFFER_SIZE * 2, sock->seed);
+    
+    // Copy (memcpy) the first half into the seed and the second half into the random number buffer
+    memcpy(sock->seed, temp_random_number_buffer, RANDOM_NUMBER_BUFFER_SIZE);
+    memcpy(sock->random_number_buffer, &temp_random_number_buffer[RANDOM_NUMBER_BUFFER_SIZE], RANDOM_NUMBER_BUFFER_SIZE);
+    
+    free(temp_random_number_buffer);
+}
+
+// Decrypt/Encrypt
+static void
+iris_win32_transform_data(openvpn_vsocket_handle_t handle, void *buf, ssize_t number_of_bytes_read)
+{
+    struct iris_socket_posix *posix_sock = (struct iris_socket_posix *) handle;
+    char *buffer = (char *)buf;
+    
+    // For each byte in buf XOR with offset number in random_number_buffer
+    for (int counter = 0; counter < number_of_bytes_read; counter++)
+    {
+        buffer[counter] = posix_sock->random_number_buffer[posix_sock->random_number_buffer_offset] ^ buffer[counter];
+        
+        // Increase the offset by one
+        posix_sock->random_number_buffer_offset++;
+        
+        // Check that the offset isn't beyond the scope of the random number
+        if (posix_sock->random_number_buffer_offset >= RANDOM_NUMBER_BUFFER_SIZE)
+        {
+            // Generate a new random number if the last was used up
+            iris_posix_create_random_number(posix_sock);
+            
+            // Rest the offset
+            posix_sock->random_number_buffer_offset = 0;
+        }
+    }
 }
 
 static openvpn_vsocket_handle_t
@@ -149,6 +200,10 @@ iris_win32_bind(void *plugin_handle,
                      const struct sockaddr *addr, openvpn_vsocket_socklen_t len)
 {
     struct iris_socket_win32 *sock = NULL;
+    struct iris_context *context = (struct iris_context *)plugin_handle;
+    unsigned char salt[crypto_pwhash_SALTBYTES];
+    const char *password = context->password;
+    
 //    struct sockaddr *addr_rev = NULL;
 //
 //    /* TODO: would be nice to factor out some of these sequences */
@@ -159,8 +214,34 @@ iris_win32_bind(void *plugin_handle,
 //    iris_munge_addr(addr_rev, len);
 
     sock = calloc(1, sizeof(struct iris_socket_win32));
+    
     if (!sock)
+    {
         goto error;
+    }
+    
+    // Create and assign seed to sock->seed
+    //FIXME: Needs salt
+    sock->seed = calloc(1, randombytes_SEEDBYTES);
+    sock->random_number_buffer = calloc(1, RANDOM_NUMBER_BUFFER_SIZE);
+    
+    int pwhash_result = crypto_pwhash(sock->seed,
+                                      randombytes_SEEDBYTES,
+                                      password,
+                                      strlen(password),
+                                      salt,
+                                      crypto_pwhash_OPSLIMIT_INTERACTIVE,
+                                      crypto_pwhash_MEMLIMIT_INTERACTIVE,
+                                      crypto_pwhash_ALG_DEFAULT);
+    if (pwhash_result != 0)
+    {
+        /* out of memory */
+        goto error;
+    }
+    
+    // Creates random numbers and assigns to the random_number_buffer and seed
+    iris_win32_create_random_number(sock);
+    
     sock->handle.vtab = &iris_socket_vtab;
     sock->ctx = (struct iris_context *) plugin_handle;
 
@@ -422,6 +503,7 @@ iris_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
     char *working_buf = sock->slot_read.buf;
     ssize_t working_len = working_buf.len
     // ssize_t unmunged_len = iris_unmunge_buf(working_buf, sock->slot_read.buf_len);
+    
     if (working_len < 0)
     {
         /* Act as though this read never happened. Assume one was queued before, so it should
@@ -444,8 +526,12 @@ iris_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
         addr_copy_len = sock->slot_read.addr_len;
     memcpy(addr, &sock->slot_read.addr, addr_copy_len);
     *addrlen = addr_copy_len;
+    
 //    if (addr_copy_len > 0)
 //        iris_munge_addr(addr, addr_copy_len);
+    
+    // Decrypt data
+    iris_win32_transform_data(handle, buf, copy_len);
 
     /* Reset the I/O slot before returning. */
     consumed_pending_read(sock);
@@ -476,6 +562,9 @@ iris_win32_sendto(openvpn_vsocket_handle_t handle, const void *buf, size_t len,
     /* TODO: propagate previous write errors---what does core expect here? */
     memcpy(&sock->slot_write.addr, addr, addrlen);
     sock->slot_write.addr_len = addrlen;
+    
+    // Encrypt Data
+    iris_win32_transform_data(handle, buf, len);
 //    if (addrlen > 0)
 //        iris_munge_addr((struct sockaddr *)&sock->slot_write.addr, addrlen);
     
