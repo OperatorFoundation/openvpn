@@ -12,8 +12,30 @@
 #include "comm-2fserver.h"
 #include "2fserver-http.h"
 #include "2fserver-model.h"
+#include "u2fdbt.h"
 
 static const char program_name[] = "openvpn-2fserver";
+static struct u2fdbt_File *user_db;
+
+static void
+open_user_database(void)
+{
+    /* TODO: unhardcode path */
+    user_db = u2fdbt_open("usertab");
+}
+
+static bool
+user_accepts_password(const char *username, const char *password)
+{
+    const struct u2fdbt_Record *record =
+        u2fdbt_find(user_db, username);
+    if (!record)
+    {
+        return false;
+    }
+
+    return u2fdbt_digest_accepts_password(record->pw_digest, password);
+}
 
 static int
 do_auth_request(const char *packet, size_t len, struct msghdr *msg,
@@ -46,8 +68,7 @@ do_auth_request(const char *packet, size_t len, struct msghdr *msg,
         goto bad;
     }
 
-    /* The worst password check ever, redux. */
-    int ok = (strcmp(username, password) == 0);
+    bool ok = user_accepts_password(username, password);
     if (!ok)
     {
         close(fd);
@@ -159,6 +180,8 @@ truemain(const struct cli_args *args)
 {
     int control_socket = args->control_socket;
     set_sigpipe_handler();
+
+    open_user_database();
     /* TODO: unhardcode port */
     twofserver_start_http(11080);
 

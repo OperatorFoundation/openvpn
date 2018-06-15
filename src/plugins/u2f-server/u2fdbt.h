@@ -2,13 +2,14 @@
 #define U2FDBT_H 1
 
 #include <stdint.h>
+#include <stdbool.h>
 
 struct u2fdbt_File {
     /* Opaque pointer owned by the library. */
     void *opaque;
 };
 
-enum u2fdbt_Flags {
+enum {
     /* Disabled flag 'D': second-factor authentication is not enabled
        for this account.
     */
@@ -48,7 +49,7 @@ enum u2fdbt_Flags {
    u2fdbt_record_dup.
  */
 struct u2fdbt_Record {
-    /* Username, UTF-8. May not contain ':'. */
+    /* Username, theoretically UTF-8. May not contain ':'. */
     const char *name;
 
     /* Password digest, ASCII, self-describing. May not contain ':'.
@@ -78,7 +79,7 @@ struct u2fdbt_Record {
     int64_t record_mtime;
 
     /* Inclusive-or of flag bits above. */
-    u2fdbt_Flags flags;
+    unsigned flags;
 
     /* A string of ASCII characters corresponding to all unknown flags
        set. May not contain ':'. This string must be of nonzero length
@@ -167,6 +168,9 @@ const struct u2fdbt_Record *u2fdbt_find(
    This is like Unix 'endpwent'.
 */
 void u2fdbt_close(struct u2fdbt_File *file);
+
+/* Return whether the digest DIGEST accepts the password PASSWORD. */
+bool u2fdbt_digest_accepts_password(const char *digest, const char *password);
 
 /* Begin an update of the U2FDBT file FILE. A full update procedure
    consists of the following:

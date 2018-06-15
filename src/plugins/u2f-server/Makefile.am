@@ -22,11 +22,13 @@ openvpn_2fserver_SOURCES = \
 	2fserver-http.c \
 	2fserver-model.c \
 	2fserver-support.c \
+	u2fdbt.c \
 	comm-2fserver.c
 openvpn_2fserver_CFLAGS = \
 	$(AM_CFLAGS) $(LIBMICROHTTPD_CFLAGS)
+# TODO: is -lcrypt always right? Move this to autoconf.
 openvpn_2fserver_LDADD = \
-	$(SOCKETS_LIBS) $(LIBMICROHTTPD_LIBS)
+	$(SOCKETS_LIBS) $(LIBMICROHTTPD_LIBS) -lcrypt
 
 openvpn_plugin_u2f_server_la_SOURCES = \
 	plugin-u2f-server.c \
