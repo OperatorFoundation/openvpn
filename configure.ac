@@ -229,6 +229,13 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+    [plugin-shapeshifter],
+    [AS_HELP_STRING([--disable-plugin-shapeshifter], [disable shapeshifter plugin @<:@default=platform specific@:>@])],
+    ,
+    [enable_plugin_shapeshifter="no"]
+)
+
+AC_ARG_ENABLE(
 	[pam-dlopen],
 	[AS_HELP_STRING([--enable-pam-dlopen], [dlopen libpam @<:@default=no@:>@])],
 	,
@@ -1331,6 +1338,7 @@ AM_CONDITIONAL([WIN32], [test "${WIN32}" = "yes"])
 AM_CONDITIONAL([GIT_CHECKOUT], [test "${GIT_CHECKOUT}" = "yes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_AUTH_PAM], [test "${enable_plugin_auth_pam}" = "yes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_DOWN_ROOT], [test "${enable_plugin_down_root}" = "yes"])
+AM_CONDITIONAL([ENABLE_PLUGIN_shapeshifter], [test "${enable_plugin_shapeshifter}" = "yes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_iris], [test "${enable_plugin_iris}" = "yes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_transport_skeleton], [test "${enable_plugin_transport_skeleton}" = "yes"])
 AM_CONDITIONAL([ENABLE_CRYPTO], [test "${enable_crypto}" = "yes"])
@@ -1395,6 +1403,7 @@ AC_CONFIG_FILES([
 	src/plugins/down-root/Makefile
     src/plugins/transport-skeleton/Makefile
     src/plugins/iris/Makefile
+    src/plugins/shapeshifter/Makefile
 	tests/Makefile
     tests/unit_tests/Makefile
     tests/unit_tests/example_test/Makefile

@@ -7,20 +7,22 @@ ADDING YOUR TRANSPORT
 
 2) There is a Makefile.am file in the plugins directory (openvpn/src/plugins). Add your transport plugin to the SUBDIRS list in this file.
 
-3) In the configure.ac file, add your transport Makefile to the list AC_CONFIG_FILES. It should look like the below example, using your transport name in place of "transport-skeleton":
+3) The following things need to be added in the configure.ac file in the root openvpn directory:
+    a) Add your transport Makefile to the list AC_CONFIG_FILES. It should look like the below example, using your transport name in place of "transport-skeleton":
 
         src/plugins/transport-skeleton/Makefile
 
-4) In the configure.ac file, add a configure flag. It should look like the below example, using your transport name in place of "transport-skeleton":
+    b) Add a configure flag. It should look like the below example, using your transport name in place of "transport-skeleton":
 
         AC_ARG_ENABLE(
-        [plugin-transport-skeleton],
-        [AS_HELP_STRING([--disable-plugin-transport-skeleton], [disable transport-skeleton plugin @<:@default=platform specific@:>@])],
-        ,
-        [enable_plugin_transport_skeleton="no"]
+            [plugin-transport-skeleton],
+            [AS_HELP_STRING([--disable-plugin-transport-skeleton], [disable transport-skeleton plugin @<:@default=platform specific@:>@])],
+            ,
+            [enable_plugin_transport_skeleton="no"]
         )
 
-5) AM_CONDITIONAL([ENABLE_PLUGIN_transport_skeleton], [test "${enable_plugin_transport_skeleton}" = "yes"])
+    c) Add AM_CONDITIONAL([ENABLE_PLUGIN_transport_skeleton], [test "${enable_plugin_transport_skeleton}" = "yes"])
+
 
 BUILD
 
@@ -28,7 +30,7 @@ In a terminal window, from the main openvpn directory, type the following comman
 
 1) autoconf -i -v -f (if you are running this for the first time) OR autoreconf -i -v -f (If you have done it before)
 
-2) ./configure --enable-plugins --enable-plugin-iris OPENSSL_LIBS="-L/usr/local/Cellar/openssl/1.0.2o_1/lib -lcrypto -lssl" OPENSSL_CFLAGS="-I/usr/local/Cellar/openssl/1.0.2o_1/include"
+2) ./configure --enable-plugins --enable-plugin-transport-skeleton OPENSSL_LIBS="-L/usr/local/Cellar/openssl/1.0.2o_1/lib -lcrypto -lssl" OPENSSL_CFLAGS="-I/usr/local/Cellar/openssl/1.0.2o_1/include"
 
 3) make
 

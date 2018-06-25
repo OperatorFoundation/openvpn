@@ -3,17 +3,17 @@
 #include <stdbool.h>
 #include "openvpn-plugin.h"
 #include "openvpn-vsocket.h"
-#include "transport-skeleton.h"
+#include "shapeshifter.h"
 
-struct openvpn_vsocket_vtab transport_skeleton_socket_vtab = { NULL };
+struct openvpn_vsocket_vtab shapeshifter_socket_vtab = { NULL };
 
-struct transport_skeleton_context
+struct shapeshifter_context
 {
     struct openvpn_plugin_callbacks *global_vtab;
 };
 
 static void
-free_context(struct transport_skeleton_context *context)
+free_context(struct shapeshifter_context *context)
 {
     if (!context)
         return;
@@ -21,11 +21,11 @@ free_context(struct transport_skeleton_context *context)
 }
 
 void
-transport_skeleton_log(struct transport_skeleton_context *ctx, openvpn_plugin_log_flags_t flags, const char *fmt, ...)
+shapeshifter_log(struct shapeshifter_context *ctx, openvpn_plugin_log_flags_t flags, const char *fmt, ...)
 {
     va_list va;
     va_start(va, fmt);
-    ctx->global_vtab->plugin_vlog(flags, transport_skeleton_PLUGIN_NAME, fmt, va);
+    ctx->global_vtab->plugin_vlog(flags, shapeshifter_PLUGIN_NAME, fmt, va);
     va_end(va);
 }
 
@@ -35,8 +35,8 @@ OPENVPN_EXPORT int openvpn_plugin_open_v3(int version, struct openvpn_plugin_arg
 {
     // This is just setting up the context
     // Currently context only does logging to OpenVPN
-    struct transport_skeleton_context *context;
-    context = (struct transport_skeleton_context *) calloc(1, sizeof(struct transport_skeleton_context));
+    struct shapeshifter_context *context;
+    context = (struct shapeshifter_context *) calloc(1, sizeof(struct shapeshifter_context));
     
     if (!context)
         return OPENVPN_PLUGIN_FUNC_ERROR;
@@ -44,7 +44,7 @@ OPENVPN_EXPORT int openvpn_plugin_open_v3(int version, struct openvpn_plugin_arg
     context->global_vtab = args->callbacks;
     
     // Sets up the VTable, useful stuff
-    transport_skeleton_initialize_socket_vtab();
+    shapeshifter_initialize_socket_vtab();
 
     // Tells openVPN what events we want the plugin to handle
     out->type_mask = OPENVPN_PLUGIN_MASK(OPENVPN_PLUGIN_SOCKET_INTERCEPT);
@@ -62,7 +62,7 @@ OPENVPN_EXPORT int openvpn_plugin_open_v3(int version, struct openvpn_plugin_arg
 OPENVPN_EXPORT void
 openvpn_plugin_close_v1(openvpn_plugin_handle_t handle)
 {
-    free_context((struct transport_skeleton_context *) handle);
+    free_context((struct shapeshifter_context *) handle);
 }
 
 OPENVPN_EXPORT int
@@ -82,10 +82,10 @@ openvpn_plugin_get_vtab_v1(int selector, size_t *size_out)
     switch (selector)
     {
         case OPENVPN_VTAB_SOCKET_INTERCEPT_SOCKET_V1:
-            if (transport_skeleton_socket_vtab.bind == NULL)
+            if (shapeshifter_socket_vtab.bind == NULL)
                 return NULL;
             *size_out = sizeof(struct openvpn_vsocket_vtab);
-            return &transport_skeleton_socket_vtab;
+            return &shapeshifter_socket_vtab;
 
         default:
             return NULL;

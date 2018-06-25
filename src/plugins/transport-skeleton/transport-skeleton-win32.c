@@ -399,9 +399,7 @@ transport_skeleton_win32_pump(openvpn_vsocket_handle_t handle)
     return result;
 }
 
-static ssize_t
-transport_skeleton_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len,
-                         struct sockaddr *addr, openvpn_vsocket_socklen_t *addrlen)
+static SSIZE_T transport_skeleton_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, size_t len, struct sockaddr *addr, openvpn_vsocket_socklen_t *addrlen)
 {
     struct transport_skeleton_socket_win32 *sock = (struct transport_skeleton_socket_win32 *)handle;
     if (!complete_pending_read(sock))
@@ -417,11 +415,11 @@ transport_skeleton_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, si
         WSASetLastError(wsa_error);
         return -1;
     }
-
-    /* sock->slot_read now has valid data. */
+    
+    // sock->slot_read now has valid data.
     char *working_buf = sock->slot_read.buf;
-    ssize_t working_len = working_buf.len
-    // ssize_t unmunged_len = transport_skeleton_unmunge_buf(working_buf, sock->slot_read.buf_len);
+    ssize_t working_len = sock->slot_read.buf_len;
+
     if (working_len < 0)
     {
         /* Act as though this read never happened. Assume one was queued before, so it should
@@ -452,9 +450,7 @@ transport_skeleton_win32_recvfrom(openvpn_vsocket_handle_t handle, void *buf, si
     return copy_len;
 }
 
-static ssize_t
-transport_skeleton_win32_sendto(openvpn_vsocket_handle_t handle, const void *buf, size_t len,
-                       const struct sockaddr *addr, openvpn_vsocket_socklen_t addrlen)
+static SSIZE_T transport_skeleton_win32_sendto(openvpn_vsocket_handle_t handle, const void *buf, size_t len, const struct sockaddr *addr, openvpn_vsocket_socklen_t addrlen)
 {
     struct transport_skeleton_socket_win32 *sock = (struct transport_skeleton_socket_win32 *)handle;
     complete_pending_write(sock);
@@ -476,13 +472,7 @@ transport_skeleton_win32_sendto(openvpn_vsocket_handle_t handle, const void *buf
     /* TODO: propagate previous write errors---what does core expect here? */
     memcpy(&sock->slot_write.addr, addr, addrlen);
     sock->slot_write.addr_len = addrlen;
-//    if (addrlen > 0)
-//        transport_skeleton_munge_addr((struct sockaddr *)&sock->slot_write.addr, addrlen);
-    
-//    resize_io_buf(&sock->slot_write, transport_skeleton_max_munged_buf_size(len));
-    
-//    sock->slot_write.buf_len = transport_skeleton_munge_buf(sock->slot_write.buf, buf, len);
-    sock->slot_write.buf_len = len
+	sock->slot_write.buf_len = len;
     
     queue_new_write(&sock->slot_write);
     switch (sock->slot_write.status)

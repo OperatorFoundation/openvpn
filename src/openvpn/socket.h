@@ -24,6 +24,12 @@
 #ifndef SOCKET_H
 #define SOCKET_H
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#elif defined(_MSC_VER)
+#include "config-msvc.h"
+#endif
+
 #include "buffer.h"
 #include "common.h"
 #include "error.h"
@@ -35,9 +41,16 @@
 #include "socks.h"
 #include "misc.h"
 
+/*
+ * FIXME: Forcing Plugins Here
+ */
+#define ENABLE_PLUGIN 1
+
 #ifdef ENABLE_PLUGIN
 #include "openvpn-vsocket.h"
 #endif
+
+
 
 /*
  * OpenVPN's default port number as assigned by IANA.
