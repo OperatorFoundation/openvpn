@@ -470,6 +470,13 @@ u2fdbt_find(struct u2fdbt_File *file, const char *name)
         return NULL;
     }
 
+    filec->scan.pos_synced = false;
+    err = fseek(filec->handle, 0, SEEK_SET);
+    if (err)
+    {
+        return NULL;
+    }
+
     size_t name_len = strlen(name);
     char *line;
     while ((line = fetch_line(filec))) {
