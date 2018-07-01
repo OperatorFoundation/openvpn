@@ -1,4 +1,6 @@
+#define _XOPEN_SOURCE 500       /* FIXME: temporary for random() */
 #include <assert.h>
+#include <stdio.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -16,6 +18,7 @@ twofserver_new_pending_auth(twofserver_TxnId id)
     if (!record)
         return NULL;
     twofserver_txn_id_copy(&record->txn_id, &id);
+    record->dummy_number = (unsigned)(random() & 0xffff);
     /* Everything else is either initialized to zero or is unset
        based on something else initialized to zero. */
     return record;
@@ -142,4 +145,45 @@ twofserver_txn_id_parse(twofserver_TxnId *out, const char *in)
     }
 
     return 0;
+}
+
+const char *
+twofserver_challenge_for_auth(struct twofserver_PendingAuth *record,
+                              enum twofserver_ChallengeResultType *chaltype)
+{
+    /* TODO: replace when integrating libu2f */
+    assert(0 <= record->dummy_number && record->dummy_number <= 0xffff);
+    snprintf(record->dummy_str_buf, sizeof(record->dummy_str_buf),
+             "%04x", record->dummy_number);
+    *chaltype = TWOFSERVER_CHALLENGE_PROVIDED;
+    return record->dummy_str_buf;
+}
+
+bool
+twofserver_check_auth_response(struct twofserver_PendingAuth *record,
+                                const char *response, size_t response_len)
+{
+    while (response_len > 0 && strchr("\r\n", response[response_len-1]))
+        response_len--;
+    if (response_len != 4)
+        return false;
+    /* I can't find right now whether the response data is zero-terminated,
+       so let's assume we have to copy... */
+    char response_copy[5];
+    assert(response_len+1 <= sizeof(response_copy));
+    memcpy(response_copy, response, response_len);
+    response_copy[response_len] = '\0';
+
+    char *end;
+    unsigned long number = strtoul(response_copy, &end, 16);
+    if (*end != '\0')
+        return false;
+    if (!(number <= 0xffff))
+        return false;
+
+    unsigned challenge = record->dummy_number;
+    unsigned expected =
+        ((challenge & 0xf000) >> 12) | ((challenge & 0x0f00) >> 4)
+        | ((challenge & 0x00f0) << 4) | ((challenge & 0x000f) << 12);
+    return expected == number;
 }

@@ -61,9 +61,9 @@ struct twofserver_PendingAuth {
     /* Primary request has been made successfully (OpenVPN side). */
     bool success1;
 
-#if 0
-    char *user;
-    struct timespec deadline;
+    /* Dummy challenge/response thing before we integrate the libu2f stuff proper. */
+    unsigned dummy_number;
+    char dummy_str_buf[10];
 
     /* Set if there is a challenge request that's been suspended
        because the primary OpenVPN authentication hasn't arrived
@@ -71,6 +71,9 @@ struct twofserver_PendingAuth {
     struct MHD_Connection *challenge_conn;
     void *challenge_conn_closure;
 
+#if 0
+    char *user;
+    struct timespec deadline;
 
     /* Secondary challenge/response passed (2F server side). */
     bool success2;
@@ -98,6 +101,8 @@ void twofserver_unlock_pending_auth(struct twofserver_PendingAuth *record);
 const char *twofserver_challenge_for_auth(struct twofserver_PendingAuth *record,
                                           enum twofserver_ChallengeResultType *chaltype);
 const char *twofserver_challenge_for_reg(struct twofserver_PendingAuth *record);
+bool twofserver_check_auth_response(struct twofserver_PendingAuth *record,
+                                    const char *response, size_t response_len);
 void twofserver_pass_pending_auth(struct twofserver_PendingAuth *record);
 void twofserver_fail_pending_auth(struct twofserver_PendingAuth *record);
 

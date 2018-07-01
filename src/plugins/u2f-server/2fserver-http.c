@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdbool.h>
 #include "2fserver-http.h"
 #include "2fserver-support.h"
@@ -13,18 +14,62 @@ static const char header_Content_Type[] = "Content-Type";
 static const char ct_text_plain[] = "text/plain";
 static const char ct_application_json[] = "application/json";
 
-static const int rcode_bad_method = 405;
-static struct MHD_Response *resp_bad_method;
-static const int rcode_not_found = 404;
-static struct MHD_Response *resp_not_found;
+static const int rcode_ok = 200;
+static const int rcode_accepted = 202;
+static const char str_accepted[] = "accepted\n";
+static struct MHD_Response *resp_accepted;
 static const int rcode_no_challenge = 204;
 static struct MHD_Response *resp_no_challenge;
+static const int rcode_forbidden = 403;
+static const char str_forbidden[] = "forbidden\n";
+static struct MHD_Response *resp_forbidden;
+static const int rcode_not_found = 404;
+static const char str_not_found[] = "not found\n";
+static struct MHD_Response *resp_not_found;
+static const int rcode_bad_method = 405;
+static const char str_bad_method[] = "bad method\n";
+static struct MHD_Response *resp_bad_method;
 static const int rcode_internal_error = 500;
+static const char str_internal_error[] = "internal error\n";
 static struct MHD_Response *resp_internal_error;
 
 /* These must not contain %. */
 static const char prefix_auth[] = "/auth/";
 static const char prefix_register[] = "/register/";
+
+static const char *
+after_prefix(const char *string, const char *prefix, size_t prefix_len)
+{
+    if (prefix_len == 0)
+        prefix_len = strlen(prefix);
+    if (strncmp(string, prefix, prefix_len))
+        return NULL;
+    return string + prefix_len;
+}
+
+#define after_prefix_static(string, prefix) \
+    after_prefix(string, prefix, sizeof(prefix)-1)
+
+static struct MHD_Response *
+create_plain_persistent_response(const char *text, size_t len)
+{
+    struct MHD_Response *result =
+        MHD_create_response_from_buffer(len, (void *)text, MHD_RESPMEM_PERSISTENT);
+    MHD_add_response_header(result, header_Content_Type, ct_text_plain);
+    return result;
+}
+
+#define create_static_response(string) \
+    create_plain_persistent_response(string, sizeof(string)-1)
+
+enum RequestState {
+    REQUEST_SUSPENDED_CHALLENGE = 1
+};
+
+struct PendingRequest {
+    twofserver_TxnId txn_id;
+    enum RequestState state;
+};
 
 static void
 handle_mhd_panic(void *unused, const char *file, unsigned line,
@@ -37,10 +82,126 @@ handle_mhd_panic(void *unused, const char *file, unsigned line,
 }
 
 static int
+get_auth_challenge(struct MHD_Connection *conn,
+                   twofserver_TxnId txn_id, void **state_cell)
+{
+    /* Authentication challenge is being requested. */
+    struct twofserver_PendingAuth *record =
+        twofserver_lock_pending_auth(txn_id);
+    if (record)
+    {
+        /* Operation already pending. */
+        enum twofserver_ChallengeResultType chaltype;
+        const char *chaltext =
+            twofserver_challenge_for_auth(record, &chaltype);
+        twofserver_unlock_pending_auth(record);
+        record = NULL;
+
+        int rcode = 0;
+        struct MHD_Response *resp = NULL;
+        bool free_resp = false;
+        const char *redirect;
+
+        /* TODO: switch indentation is weird for no good reason */
+        switch (chaltype)
+        {
+            case TWOFSERVER_CHALLENGE_PROVIDED:
+                rcode = rcode_ok;
+                resp = MHD_create_response_from_buffer(
+                    strlen(chaltext), (void *)chaltext, MHD_RESPMEM_MUST_COPY);
+                free_resp = true;
+                break;
+    
+            case TWOFSERVER_CHALLENGE_UNNECESSARY:
+                rcode = rcode_no_challenge;
+                resp = resp_no_challenge;
+                break;
+    
+            case TWOFSERVER_CHALLENGE_REGISTRATION_REQUIRED:
+#if 0
+                redirect = format_path("%s%I", prefix_register, &txn_id);
+                rcode = 303;
+                resp = MHD_create_response_from_buffer(
+                    0, "", MHD_RESPMEM_PERSISTENT);
+                MHD_add_response_header(resp, header_Content_Type, ct_text_plain);
+                MHD_add_response_header(resp, header_Location, redirect);
+                free(redirect);
+                redirect = NULL;
+                free_resp = true;
+                break;
+#endif
+                /* fall through until implemented */
+    
+            default:
+                /* Whoa, that's wrong. */
+                rcode = rcode_internal_error;
+                resp = resp_internal_error;
+                break;
+        }
+
+        int ok = MHD_queue_response(conn, rcode, resp);
+        if (free_resp)
+        {
+            MHD_destroy_response(resp);
+            resp = NULL;
+        }
+        return ok;
+    }
+    else
+    {
+        /* This request arrived first, so we have to wait to
+           respond to it until the OpenVPN auth succeeds. */
+        struct PendingRequest *suspended =
+            calloc(1, sizeof(struct PendingRequest));
+        /* TODO: log OOM */
+        if (!suspended)
+            return MHD_NO;
+        suspended->state = REQUEST_SUSPENDED_CHALLENGE;
+        twofserver_txn_id_copy(&suspended->txn_id, &txn_id);
+        *state_cell = suspended;
+
+        struct twofserver_PendingAuth *record =
+            twofserver_new_pending_auth(txn_id);
+        record->challenge_conn = conn;
+        twofserver_queue_pending_auth(record);
+
+        /* No response yet. */
+        MHD_suspend_connection(conn);
+        /* TODO: check return of MHD_suspend_connection */
+        return MHD_YES;
+    }
+}
+
+static int
+post_auth_attempt(struct MHD_Connection *conn,
+                  twofserver_TxnId txn_id,
+                  const char *data, size_t *data_size,
+                  void **state_cell)
+{
+    /* Response to authentication challenge is being posted. */
+    struct twofserver_PendingAuth *record =
+        twofserver_lock_pending_auth(txn_id);
+    if (!record)
+        return MHD_queue_response(conn, rcode_not_found, resp_not_found);
+
+    if (twofserver_check_auth_response(record, data, *data_size))
+    {
+        twofserver_pass_pending_auth(record);
+        return MHD_queue_response(conn, rcode_accepted, resp_accepted);
+    }
+    else
+    {
+        twofserver_fail_pending_auth(record);
+        return MHD_queue_response(conn, rcode_forbidden, resp_forbidden);
+    }
+}
+
+static int
 handle_request(void *unused, struct MHD_Connection *conn,
                const char *url, const char *method, const char *version,
                const char *data, size_t *data_size, void **state_cell)
 {
+    /* TODO: reconcile with cookie vs path thing */
     const char *txn_id_string =
         MHD_lookup_connection_value(conn, MHD_COOKIE_KIND, cookie_Txn);
     twofserver_TxnId id;
@@ -50,19 +211,44 @@ handle_request(void *unused, struct MHD_Connection *conn,
         return MHD_queue_response(conn, rcode_not_found, resp_not_found);
     }
 
-    struct twofserver_PendingAuth *record =
-        twofserver_lock_pending_auth(id);
-    if (!record)
+    const char *tail;
+
+    if ((tail = after_prefix_static(url, prefix_auth)))
+    {
+        if (!strcmp(method, method_GET))
+        {
+            return get_auth_challenge(conn, id, state_cell);
+        }
+        else if (!strcmp(method, method_POST))
+        {
+            return post_auth_attempt(conn, id, data, data_size, state_cell);
+        }
+        else
+        {
+            return MHD_queue_response(conn, rcode_bad_method, resp_bad_method);
+        }
+    }
+    else if ((tail = after_prefix_static(url, prefix_register)))
+    {
+        if (!strcmp(method, method_GET))
+        {
+            return MHD_queue_response(conn, rcode_not_found, resp_not_found);
+            //return get_reg_challenge(conn, tail, state_cell);
+        }
+        else if (!strcmp(method, method_POST))
+        {
+            return MHD_queue_response(conn, rcode_not_found, resp_not_found);
+            //return post_reg_attempt(conn, tail, data, data_size, state_cell);
+        }
+        else
+        {
+            return MHD_queue_response(conn, rcode_bad_method, resp_bad_method);
+        }
+    }
+    else
     {
         return MHD_queue_response(conn, rcode_not_found, resp_not_found);
     }
-    if (!record->success1)
-    {
-        return MHD_queue_response(conn, rcode_internal_error, resp_internal_error);
-    }
-
-    twofserver_pass_pending_auth(record);
-    return MHD_queue_response(conn, rcode_no_challenge, resp_no_challenge);
 }
 
 void
@@ -101,22 +287,13 @@ twofserver_start_http(unsigned port)
     /* TODO: check result */
 
     /* TODO: check return codes */
-    static const char str_bad_method[] = "bad method\n";
-    resp_bad_method = MHD_create_response_from_buffer(
-        sizeof(str_bad_method)-1, (void *)str_bad_method, MHD_RESPMEM_PERSISTENT);
-    MHD_add_response_header(resp_bad_method, header_Content_Type, ct_text_plain);
 
-    static const char str_not_found[] = "not found\n";
-    resp_not_found = MHD_create_response_from_buffer(
-        sizeof(str_not_found)-1, (void *)str_not_found, MHD_RESPMEM_PERSISTENT);
-    MHD_add_response_header(resp_not_found, header_Content_Type, ct_text_plain);
-
+    resp_accepted = create_static_response(str_accepted);
     /* Must have zero-length content because HTTP code 204 implies that. */
     resp_no_challenge = MHD_create_response_from_buffer(
         0, (void *)"", MHD_RESPMEM_PERSISTENT);
-
-    static const char str_internal_error[] = "internal error\n";
-    resp_internal_error = MHD_create_response_from_buffer(
-        sizeof(str_internal_error)-1, (void *)str_internal_error, MHD_RESPMEM_PERSISTENT);
-    MHD_add_response_header(resp_internal_error, header_Content_Type, ct_text_plain);
+    resp_forbidden = create_static_response(str_forbidden);
+    resp_not_found = create_static_response(str_not_found);
+    resp_bad_method = create_static_response(str_bad_method);
+    resp_internal_error = create_static_response(str_internal_error);
 }
