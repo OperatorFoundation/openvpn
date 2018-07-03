@@ -1169,12 +1169,18 @@ verify_user_pass_plugin(struct tls_session *session, const struct user_pass *up,
     struct key_state *ks = &session->key[KS_PRIMARY];      /* primary key */
 #endif
 
+    struct gc_arena gc = gc_new();
+    char *sessionid = NULL;
+
     /* Is username defined? */
     if ((session->opt->ssl_flags & SSLF_AUTH_USER_PASS_OPTIONAL) || strlen(up->username))
     {
         /* set username/password in private env space */
         setenv_str(session->opt->es, "username", (raw_username ? raw_username : up->username));
         setenv_str(session->opt->es, "password", up->password);
+        ALLOC_ARRAY_CLEAR_GC(sessionid, char, 11, &gc); // Maximum size of 8 bytes after base64 encoding
+        openvpn_base64_encode(session->session_id.id, 8, &sessionid);
+        setenv_str(session->opt->es, "sessionid", sessionid);
 
         /* setenv incoming cert common name for script */
         setenv_str(session->opt->es, "common_name", session->common_name);
@@ -1208,6 +1214,8 @@ verify_user_pass_plugin(struct tls_session *session, const struct user_pass *up,
     {
         msg(D_TLS_ERRORS, "TLS Auth Error (verify_user_pass_plugin): peer provided a blank username");
     }
+
+    gc_free(&gc);
 
     return retval;
 }
