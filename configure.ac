@@ -26,8 +26,8 @@ dnl Process this file with autoconf to produce a configure script.
 AC_PREREQ(2.59)
 
 m4_include(version.m4)
-m4_include(libcurl.m4)
-m4_include(libu2f-host.m4)
+m4_include(m4/libcurl.m4)
+m4_include(m4/libu2f-host.m4)
 
 AC_INIT([PRODUCT_NAME], [PRODUCT_VERSION], [PRODUCT_BUGREPORT], [PRODUCT_TARNAME])
 m4_include(compat.m4)
@@ -1295,7 +1295,7 @@ if test "${enable_plugin_auth_pam}" = "yes"; then
 fi
 
 if test "${enable_plugin_u2f_client}" = "yes"; then
-	PLUGIN_U2F_CLIENT_CFLAGS="${LIBU2FHOST_CPPFLAGS}"
+	PLUGIN_U2F_CLIENT_CFLAGS="${LIBU2FHOST_CFLAGS}"
 fi
 
 if test "${enable_async_push}" = "yes"; then

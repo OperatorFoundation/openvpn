@@ -10,8 +10,6 @@
 
 #include <curl/curl.h>
 #include <u2f-host/u2f-host.h>
-#include "randombytes/randombytes.h"
-#include "b64/b64.h"
 
 #include "openvpn-plugin.h"
 #include "comm-2fclient.h"
@@ -50,9 +48,8 @@ do_auth_request(u2fh_devs *devs, const char *packet, size_t len, struct msghdr *
     int fd;
     const char *username;
     const char *password;
+    const char *txid;
     const char *origin;
-    unsigned char txidbytes[128];
-    char *txid;
     long http_result;
     char *register_challenge;
     char *auth_challenge;
@@ -71,7 +68,7 @@ do_auth_request(u2fh_devs *devs, const char *packet, size_t len, struct msghdr *
     }
 
     if (comm_2fclient_parse_packet(packet, len, msg,
-                                   "Fss", &fd, &username, &password, &origin))
+                                   "Fsss", &fd, &username, &password, &txid, &origin))
     {
         free(chunk.memory);
         curl_easy_cleanup(curl);
@@ -81,9 +78,6 @@ do_auth_request(u2fh_devs *devs, const char *packet, size_t len, struct msghdr *
 
     /* The worst password check ever, redux. */
     int ok = (strcmp(username, password) == 0);
-
-    randombytes(txidbytes, 128);
-    txid=b64_encode(txidbytes, 128);
 
     /*
      * Endpoints for 2F server
@@ -308,7 +302,7 @@ do_auth_request(u2fh_devs *devs, const char *packet, size_t len, struct msghdr *
             /* 303 → registration endpoint - in-band registration required */
             free(chunk.memory);
             curl_easy_cleanup(curl);
-            do_auth_request(devs, packet, len, msg, error, 1);
+            return do_auth_request(devs, packet, len, msg, error, 1);
             break;
         default:
             free(chunk.memory);

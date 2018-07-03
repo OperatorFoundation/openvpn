@@ -8,3 +8,6 @@
 [submodule "src/plugins/u2f-client/b64"]
 	path = src/plugins/u2f-client/b64
 	url = https://github.com/littlstar/b64.c.git
+[submodule "src/plugins/u2f-client/b64.c"]
+	path = src/plugins/u2f-client/b64.c
+	url = https://github.com/littlstar/b64.c.git

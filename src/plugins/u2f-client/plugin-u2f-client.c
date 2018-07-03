@@ -159,6 +159,7 @@ openvpn_plugin_func_v1(openvpn_plugin_handle_t handle, int type,
 
     const char *username = get_env("username", envp);
     const char *password = get_env("password", envp);
+    const char *txid = get_env("sessionid", envp);
     const char *origin = get_env("origin", envp);
     const char *common_name = get_env("common_name", envp);
     const char *acf = get_env("auth_control_file", envp);
@@ -187,7 +188,7 @@ openvpn_plugin_func_v1(openvpn_plugin_handle_t handle, int type,
     }
 
     comm_2fclient_send_packet(ctx->control_socket, OP_AUTH_REQUEST,
-                              "Fsss", acf_fd, username, password, origin);
+                              "Fssss", acf_fd, username, password, txid, origin);
     close(acf_fd);
 
     /* TODO: factor out receive-and-parse */
