@@ -6,8 +6,65 @@
 #include <unistd.h>
 #include "2fserver-model.h"
 
-static struct twofserver_PendingAuth *the_record;
+static struct twofserver_PendingAuth *the_table;
+static size_t the_table_cap;
 static pthread_mutex_t the_table_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* Capacity must be a power of two. See below where this is used. */
+int
+twofserver_allocate_table(size_t capacity)
+{
+    assert(!the_table);
+    assert((capacity & (capacity-1)) == 0);
+    struct twofserver_PendingAuth *array =
+        calloc(sizeof(struct twofserver_PendingAuth), capacity);
+    if (!array)
+        return -1;
+    
+    the_table = array;
+    the_table_cap = capacity;
+}
+
+static inline unsigned
+index_for_txn_id(twofserver_TxnId id)
+{
+    return ((unsigned)(unsigned char)id.bytes[0]
+            | ((unsigned)(unsigned char)id.bytes[1] << 8)
+            | ((unsigned)(unsigned char)id.bytes[2] << 16)
+            | ((unsigned)(unsigned char)id.bytes[3] << 24));
+}
+
+static inline unsigned
+step_for_txn_id(twofserver_TxnId id, size_t capacity)
+{
+    /* Capacity must be a power of two, enforced above. */
+    return
+        ((size_t)1u
+         | (size_t)(unsigned char)id.bytes[4]
+         | ((size_t)(unsigned char)id.bytes[5] << 8)
+         | ((size_t)(unsigned char)id.bytes[6] << 16)
+         | ((size_t)(unsigned char)id.bytes[7] << 24))
+        & (capacity-1);
+}
+
+#if 0
+/* The mutex must be taken. */
+static unsigned
+lookup_txn_id(twofserver_TxnId id)
+{
+    unsigned here = index_for_txn_id(id);
+    unsigned step = step_for_txn_id(id, the_table_cap);
+    /* TODO: fewer max_steps? Constrain max load? */
+    for (size_t max_steps = the_table_cap; max_steps > 0; max_steps--) {
+        if (!twofserver_pending_auth_exists(&the_table[here]) /* TODO */
+            || twofserver_txn_id_equal(the_table[here].txn_id, id)) {
+            return here;
+        }
+    }
+
+    return (unsigned)-1;
+}
+#endif 
 
 struct twofserver_PendingAuth *
 twofserver_new_pending_auth(twofserver_TxnId id)
