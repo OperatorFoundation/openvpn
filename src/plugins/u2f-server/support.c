@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
+#include "support.h"
 
 bool
 memequal_consttime(const void *a_, const void *b_, size_t n)
