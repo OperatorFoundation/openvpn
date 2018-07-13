@@ -39,6 +39,12 @@ enum {
     U2FDBT_FLAG_UNKNOWN = 1u << 0
 };
 
+/* String key-value pair for one extended property of one record. */
+struct u2fdbt_Property {
+    const char *key;
+    const char *value;
+};
+
 /* Structure representing one record in a U2FDBT database.
 
    A record pointer returned by a read operation (mainly u2fdbt_next
@@ -81,14 +87,19 @@ struct u2fdbt_Record {
     /* Inclusive-or of flag bits above. */
     unsigned flags;
 
-    /* A string of ASCII characters corresponding to all unknown flags
-       set. May not contain ':'. This string must be of nonzero length
-       when and only when U2FDBT_FLAG_UNKNOWN is set in the flags
-       field. It must never be a null pointer.
+    /* An unsorted string of ASCII characters corresponding to all
+       unknown flags set. May not contain ':'. This string must be of
+       nonzero length when and only when U2FDBT_FLAG_UNKNOWN is set in
+       the flags field. It must never be a null pointer.
     */
     const char *unknown_flags;
 
-    /* struct u2fdbt_Keyval *property_list; */
+    /* A _sorted_ array of property_list_len key-value pairs
+       corresponding to extended properties from this record. The
+       entries are sorted in strcmp order of keys. Keys are unique.
+    */
+    const struct u2fdbt_Property *property_list;
+    size_t property_list_len;
 
     /* Opaque pointer owned by the library. */
     void *opaque;

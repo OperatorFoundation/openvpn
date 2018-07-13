@@ -153,6 +153,10 @@ u2fdbt_open(const char *path)
     filec->path_buf[filec->path_len] = '\0';
     filec->path_buf[filec->path_len+1] = '\0';
 
+    /* Note that the line buffer should always have a bounded
+       capacity; there are potential integer overflows elsewhere
+       prevented by only being able to iterate over a "reasonable"
+       number of characters. */
     filec->line_len = 0;
     filec->line_cap = 4096;     /* TODO: doc/move */
     filec->line_buf = malloc(filec->line_cap);
@@ -222,6 +226,15 @@ safe_store_int64_llong(int64_t *p, long long val)
 #endif
     *p = val;
     return 0;
+}
+
+/* Comparison function for property keys for qsort. */
+static int
+property_keycmp_void(const void *a_, const void *b_)
+{
+    const struct u2fdbt_Property *a = a_;
+    const struct u2fdbt_Property *b = b_;
+    return strcmp(a->key, b->key);
 }
 
 /* TODO: maybe export something like this? */
@@ -357,7 +370,76 @@ parse_line(char *line, struct u2fdbt_Record *record)
     record->flags = flags;
     record->unknown_flags = flags_str;
 
-    /* TODO: parse remaining properties. */
+    /* Advance past flags field. */
+    if (!sep)
+    {
+        goto end;
+    }
+    here = sep+1;
+
+    /* Extended properties. */
+    struct u2fdbt_Property *plist = malloc(sizeof(struct u2fdbt_Property));
+    size_t plist_len = 0, plist_cap = 1;
+    if (!plist)
+    {
+        /* Preserve errno from malloc. */
+        goto bad;
+    }
+
+    while (*here) {
+        const char *key = here;
+        while (*here && !(*here == ':' || *here == '='))
+            here++;
+        if (*here != '=')
+        {
+            /* Malformed property, no value separator. */
+            errno = EINVAL;
+            goto bad;
+        }
+
+        *here = '\0';
+        here++;
+
+        const char *value = here;
+        sep = strchr(here, ':');
+        if (sep)
+        {
+            *sep = '\0';
+            here = sep+1;
+        }
+        else
+        {
+            here = strchr(here, '\0');
+        }
+
+        /* Realloc on power of 2. */
+        const size_t new_len = plist_len+1;
+        if (new_len > plist_cap)
+        {
+            /* Overflow prevented by maximum line buffer capacity. */
+            const size_t new_cap = plist_cap << 1;
+            plist = realloc(plist, sizeof(u2fdbt_Property) * new_cap);
+            plist_cap = new_cap;
+            assert(new_len <= plist_cap);
+        }
+
+        /* Defensive memset in case the property struct gets extended.
+           (It almost definitely won't be.) */
+        memset(&plist[new_len-1], 0, sizeof(u2fdbt_Property));
+        plist[new_len-1].key = key;
+        plist[new_len-1].value = value;
+        plist_len = new_len;
+    }
+
+    /* Sort the property list. */
+    if (plist_len > 1)
+    {
+        qsort(plist, plist_len, sizeof(u2fdbt_Property), property_keycmp_void);
+    }
+
+    record->property_list = plist;
+    record->property_list_len = plist_len;
+
 end:
     /* TODO: consistency-check record, decide what to do about returning
        inconsistent records, as well as what to do about malformed lines
