@@ -100,10 +100,16 @@ void twofserver_unlock_pending_auth(struct twofserver_PendingAuth *record);
 
 const char *twofserver_challenge_for_auth(struct twofserver_PendingAuth *record,
                                           enum twofserver_ChallengeResultType *chaltype);
-const char *twofserver_challenge_for_reg(struct twofserver_PendingAuth *record);
 bool twofserver_check_auth_response(struct twofserver_PendingAuth *record,
                                     const char *response, size_t response_len);
 void twofserver_pass_pending_auth(struct twofserver_PendingAuth *record);
 void twofserver_fail_pending_auth(struct twofserver_PendingAuth *record);
+
+bool twofserver_already_registered(struct twofserver_PendingAuth *record);
+bool twofserver_can_register(struct twofserver_PendingAuth *record);
+const char *twofserver_challenge_for_reg(struct twofserver_PendingAuth *record);
+void twofserver_process_reg(struct twofserver_PendingAuth *record);
+bool twofserver_check_reg_response(struct twofserver_PendingAuth *record,
+                                   const char *response, size_t response_len);
 
 #endif /* !TWOFSERVER_STATE_H */

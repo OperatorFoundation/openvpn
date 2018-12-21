@@ -198,16 +198,76 @@ post_auth_attempt(struct MHD_Connection *conn,
 }
 
 static int
+get_reg_challenge(struct MHD_Connection *conn, twofserver_TxnId txn_id,
+                  void **state_cell)
+{
+    /* Registration challenge is being requested. */
+    struct twofserver_PendingAuth *record =
+        twofserver_lock_pending_auth(txn_id);
+    if (!record)
+        return MHD_queue_response(conn, rcode_not_found, resp_not_found);
+
+    /* We should only ever get here after a redirect from an
+       authentication, so the record should already have
+       existed. Otherwise, we wouldn't have been able to respond to
+       the first request. */
+
+    if (twofserver_already_registered(record))
+    {
+        /* TODO: do we need to handle multiple key registrations? */
+        twofserver_unlock_pending_auth(record);
+        return MHD_queue_response(conn, rcode_no_challenge, resp_no_challenge);
+    }
+
+    if (!twofserver_can_register(record))
+    {
+        twofserver_unlock_pending_auth(record);
+        return MHD_queue_response(conn, rcode_forbidden, resp_forbidden);
+    }
+
+    const char *chaltext = twofserver_challenge_for_reg(record);
+    struct MHD_Response *resp = MHD_create_response_from_buffer(
+        strlen(chaltext), (void *)chaltext, MHD_RESPMEM_MUST_COPY);
+    int ok = MHD_queue_response(conn, rcode_ok, resp);
+    MHD_destroy_response(resp);
+    return ok;
+}
+
+static int
+post_reg_attempt(struct MHD_Connection *conn,
+                 twofserver_TxnId txn_id,
+                 const char *data, size_t *data_size,
+                 void **state_cell)
+{
+    /* Response to registration challenge is being posted. */
+    struct twofserver_PendingAuth *record =
+        twofserver_lock_pending_auth(txn_id);
+    if (!record)
+        return MHD_queue_response(conn, rcode_not_found, resp_not_found);
+
+    if (!twofserver_check_reg_response(record, data, *data_size))
+    {
+        twofserver_fail_pending_auth(record);
+        return MHD_queue_response(conn, rcode_forbidden, resp_forbidden);
+    }
+
+    twofserver_process_reg(record);
+    twofserver_pass_pending_auth(record);
+    return MHD_queue_response(conn, rcode_accepted, resp_accepted);
+}
+
+static int
 handle_request(void *unused, struct MHD_Connection *conn,
                const char *url, const char *method, const char *version,
                const char *data, size_t *data_size, void **state_cell)
 {
     /* TODO: do we need first-factor auth on each request here? */
+    const char *tail;
 
     if ((tail = after_prefix_static(url, prefix_auth)))
     {
         twofserver_TxnId id;
-        int err = twofserver_txn_id_parse(&id, txn_id_string);
+        int err = twofserver_txn_id_parse(&id, tail);
         if (err)
         {
             return MHD_queue_response(conn, rcode_not_found, resp_not_found);
@@ -229,7 +289,7 @@ handle_request(void *unused, struct MHD_Connection *conn,
     else if ((tail = after_prefix_static(url, prefix_register)))
     {
         twofserver_TxnId id;
-        int err = twofserver_txn_id_parse(&id, txn_id_string);
+        int err = twofserver_txn_id_parse(&id, tail);
         if (err)
         {
             return MHD_queue_response(conn, rcode_not_found, resp_not_found);
@@ -237,13 +297,11 @@ handle_request(void *unused, struct MHD_Connection *conn,
 
         if (!strcmp(method, method_GET))
         {
-            return MHD_queue_response(conn, rcode_not_found, resp_not_found);
-            //return get_reg_challenge(conn, tail, state_cell);
+            return get_reg_challenge(conn, id, state_cell);
         }
         else if (!strcmp(method, method_POST))
         {
-            return MHD_queue_response(conn, rcode_not_found, resp_not_found);
-            //return post_reg_attempt(conn, tail, data, data_size, state_cell);
+            return post_reg_attempt(conn, id, data, data_size, state_cell);
         }
         else
         {
