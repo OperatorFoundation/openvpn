@@ -94,9 +94,20 @@ struct u2fdbt_Record {
     */
     const char *unknown_flags;
 
+    /* A U2F key handle in libu2f-server format. This isn't parsed or stored yet. */
+    const char *u2f_key_handle;
+
+    /* A U2F public key in libu2f-server format. This isn't parsed or stored yet. */
+    const unsigned char *u2f_public_key;
+
+    /* Unix timestamp of last U2F key update, or 0 for unknown. This isn't parsed or stored yet. */
+    int64_t u2f_mtime;
+
     /* A _sorted_ array of property_list_len key-value pairs
        corresponding to extended properties from this record. The
        entries are sorted in strcmp order of keys. Keys are unique.
+
+       This is probably going to go away shortly.
     */
     const struct u2fdbt_Property *property_list;
     size_t property_list_len;
