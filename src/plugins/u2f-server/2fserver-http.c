@@ -201,20 +201,17 @@ handle_request(void *unused, struct MHD_Connection *conn,
                const char *url, const char *method, const char *version,
                const char *data, size_t *data_size, void **state_cell)
 {
-    /* TODO: reconcile with cookie vs path thing */
-    const char *txn_id_string =
-        MHD_lookup_connection_value(conn, MHD_COOKIE_KIND, cookie_Txn);
-    twofserver_TxnId id;
-    int err = twofserver_txn_id_parse(&id, txn_id_string);
-    if (err)
-    {
-        return MHD_queue_response(conn, rcode_not_found, resp_not_found);
-    }
-
-    const char *tail;
+    /* TODO: do we need first-factor auth on each request here? */
 
     if ((tail = after_prefix_static(url, prefix_auth)))
     {
+        twofserver_TxnId id;
+        int err = twofserver_txn_id_parse(&id, txn_id_string);
+        if (err)
+        {
+            return MHD_queue_response(conn, rcode_not_found, resp_not_found);
+        }
+
         if (!strcmp(method, method_GET))
         {
             return get_auth_challenge(conn, id, state_cell);
@@ -230,6 +227,13 @@ handle_request(void *unused, struct MHD_Connection *conn,
     }
     else if ((tail = after_prefix_static(url, prefix_register)))
     {
+        twofserver_TxnId id;
+        int err = twofserver_txn_id_parse(&id, txn_id_string);
+        if (err)
+        {
+            return MHD_queue_response(conn, rcode_not_found, resp_not_found);
+        }
+
         if (!strcmp(method, method_GET))
         {
             return MHD_queue_response(conn, rcode_not_found, resp_not_found);
