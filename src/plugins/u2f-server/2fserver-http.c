@@ -88,6 +88,7 @@ get_auth_challenge(struct MHD_Connection *conn,
     /* Authentication challenge is being requested. */
     struct twofserver_PendingAuth *record =
         twofserver_lock_pending_auth(txn_id);
+
     if (record)
     {
         /* Operation already pending. */
@@ -147,7 +148,7 @@ get_auth_challenge(struct MHD_Connection *conn,
         }
         return ok;
     }
-    else
+    else /* !record */
     {
         /* This request arrived first, so we have to wait to
            respond to it until the OpenVPN auth succeeds. */
