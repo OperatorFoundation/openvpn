@@ -244,3 +244,41 @@ twofserver_check_auth_response(struct twofserver_PendingAuth *record,
         | ((challenge & 0x00f0) << 4) | ((challenge & 0x000f) << 12);
     return expected == number;
 }
+
+const char *
+twofserver_challenge_for_reg(struct twofserver_PendingAuth *record)
+{
+    /* TODO: replace when integrating libu2f */
+    assert(0 <= record->dummy_number && record->dummy_number <= 0xffff);
+    snprintf(record->dummy_str_buf, sizeof(record->dummy_str_buf),
+             "%04x", record->dummy_number);
+    return record->dummy_str_buf;
+}
+
+bool
+twofserver_already_registered(struct twofserver_PendingAuth *record)
+{
+    /* TODO: stub */
+    return false;
+}
+
+bool
+twofserver_can_register(struct twofserver_PendingAuth *record)
+{
+    /* TODO: stub */
+    return false;
+}
+
+bool
+twofserver_check_reg_response(struct twofserver_PendingAuth *record,
+                              const char *response, size_t response_len)
+{
+    /* TODO: stub */
+    return false;
+}
+
+void
+twofserver_process_reg(struct twofserver_PendingAuth *record)
+{
+    /* TODO: stub */
+}

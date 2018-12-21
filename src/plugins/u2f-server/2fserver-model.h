@@ -108,8 +108,8 @@ void twofserver_fail_pending_auth(struct twofserver_PendingAuth *record);
 bool twofserver_already_registered(struct twofserver_PendingAuth *record);
 bool twofserver_can_register(struct twofserver_PendingAuth *record);
 const char *twofserver_challenge_for_reg(struct twofserver_PendingAuth *record);
-void twofserver_process_reg(struct twofserver_PendingAuth *record);
 bool twofserver_check_reg_response(struct twofserver_PendingAuth *record,
                                    const char *response, size_t response_len);
+void twofserver_process_reg(struct twofserver_PendingAuth *record);
 
 #endif /* !TWOFSERVER_STATE_H */
