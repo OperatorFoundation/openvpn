@@ -76,6 +76,7 @@ struct plugin {
     openvpn_plugin_client_destructor_v1 client_destructor;
     openvpn_plugin_min_version_required_v1 min_version_required;
     openvpn_plugin_select_initialization_point_v1 initialization_point;
+    openvpn_plugin_get_vtab_v1 get_vtab;
 
     openvpn_plugin_handle_t plugin_handle;
 };

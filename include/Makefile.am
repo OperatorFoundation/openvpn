@@ -15,4 +15,5 @@ MAINTAINERCLEANFILES = \
 
 include_HEADERS = \
 	openvpn-plugin.h \
+	openvpn-transport.h \
 	openvpn-msg.h

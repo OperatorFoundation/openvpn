@@ -119,6 +119,9 @@ plugin_type_name(const int type)
         case OPENVPN_PLUGIN_ROUTE_PREDOWN:
             return "PLUGIN_ROUTE_PREDOWN";
 
+        case OPENVPN_PLUGIN_TRANSPORT:
+            return "PLUGIN_TRANSPORT";
+
         default:
             return "PLUGIN_???";
     }
@@ -295,6 +298,7 @@ plugin_init_item(struct plugin *p, const struct plugin_option *o)
     PLUGIN_SYM(client_destructor, "openvpn_plugin_client_destructor_v1", 0);
     PLUGIN_SYM(min_version_required, "openvpn_plugin_min_version_required_v1", 0);
     PLUGIN_SYM(initialization_point, "openvpn_plugin_select_initialization_point_v1", 0);
+    PLUGIN_SYM(get_vtab, "openvpn_plugin_get_vtab_v1", 0);
 
     if (!p->open1 && !p->open2 && !p->open3)
     {

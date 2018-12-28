@@ -129,7 +129,8 @@ extern "C" {
 #define OPENVPN_PLUGIN_TLS_FINAL             10
 #define OPENVPN_PLUGIN_ENABLE_PF             11
 #define OPENVPN_PLUGIN_ROUTE_PREDOWN         12
-#define OPENVPN_PLUGIN_N                     13
+#define OPENVPN_PLUGIN_TRANSPORT             13
+#define OPENVPN_PLUGIN_N                     14
 
 /*
  * Build a mask out of a set of plug-in types.
@@ -851,6 +852,34 @@ OPENVPN_PLUGIN_DEF int OPENVPN_PLUGIN_FUNC(openvpn_plugin_select_initialization_
  */
 OPENVPN_PLUGIN_DEF int OPENVPN_PLUGIN_FUNC(openvpn_plugin_min_version_required_v1)
     (void);
+
+/*
+ * FUNCTION: openvpn_plugin_get_vtab_v1
+ *
+ * This is only used for TRANSPORT plugins presently.  It is called to
+ * retrieve a vtable structure to be used for binding virtual sockets
+ * which use the transport provided by the plugin. The selector is an
+ * OPENVPN_VTAB constant. *size_out must be set to the size of the
+ * structure returned.
+ *
+ * REQUIRED: only for TRANSPORT plugins
+ *
+ * RETURN VALUE
+ *
+ * A pointer to a vtable of the requested type, or NULL if no
+ * such vtable is provided by this plugin.
+ */
+
+enum {
+    /* Return type: struct openvpn_transport_bind_vtab1 *
+       Plugin should provide OPENVPN_PLUGIN_TRANSPORT at open time.
+     */
+    OPENVPN_VTAB_TRANSPORT_BIND_V1 = 0x54726e31 /* 'Trn1' */
+};
+
+
+OPENVPN_PLUGIN_DEF void *OPENVPN_PLUGIN_FUNC(openvpn_plugin_get_vtab_v1)
+    (int selector, size_t *size_out);
 
 /*
  * Deprecated functions which are still supported for backward compatibility.
