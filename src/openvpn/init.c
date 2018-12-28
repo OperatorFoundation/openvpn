@@ -3335,6 +3335,7 @@ do_init_socket_1(struct context *c, const int mode)
                             &c->c1.link_socket_addr,
                             c->options.ipchange,
                             c->plugins,
+                            c->options.ce.transport_plugin_argv,
                             c->options.resolve_retry_seconds,
                             c->options.ce.mtu_discover_type,
                             c->options.rcvbuf,

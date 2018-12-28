@@ -1916,6 +1916,7 @@ link_socket_init_phase1(struct link_socket *sock,
                         struct link_socket_addr *lsa,
                         const char *ipchange_command,
                         const struct plugin_list *plugins,
+                        const char **transport_plugin_argv,
                         int resolve_retry_seconds,
                         int mtu_discover_type,
                         int rcvbuf,
@@ -1955,6 +1956,7 @@ link_socket_init_phase1(struct link_socket *sock,
     sock->info.bind_ipv6_only = bind_ipv6_only;
     sock->info.ipchange_command = ipchange_command;
     sock->info.plugins = plugins;
+    sock->info.transport_plugin_argv = transport_plugin_argv;
     sock->server_poll_timeout = server_poll_timeout;
 
     sock->mode = mode;

@@ -2847,6 +2847,46 @@ every module and script must return success (0) in order for
 the connection to be authenticated.
 .\"*********************************************************
 .TP
+.B \-\-transport-plugin module-pathname [connection-args]
+Use the loaded plugin module identified by
+.B module-pathname
+to provide a transport layer for the connection. The
+.B module-pathname
+must be exactly equivalent to a pathname supplied to a
+.B \-\-plugin
+option. The same transport plugin may be used for
+multiple connections, in which case the
+.B \-\-plugin
+option which loads it should only occur once. However,
+only one transport plugin may be specified per
+connection.
+
+If
+.B connection-args
+are present, these arguments are passed to the transport
+plugin when establishing this connection specifically; this
+is distinct from any per-plugin arguments which may have
+been specified using the
+.B \-\-plugin
+option. Documentation for possible
+.B connection-args
+may be provided along with the plugin in use.
+
+When a transport plugin is in use, the
+.B \-\-proto
+option should not normally be used and will usually result in
+an error, as the transport plugin takes over from the native
+transport protocol that would otherwise be specified. The
+rest of OpenVPN will operate in a manner similar to that of
+UDP mode, using the pseudo-protocol "indirect". There is one
+remaining rare use for
+.B \-\-proto
+in this case, which is to force a specific address family for
+transport plugins for which this is still meaningful. This can
+be done by specifying "indirect4" or "indirect6" as the
+protocol.
+.\"*********************************************************
+.TP
 .B \-\-keying\-material\-exporter label len
 Save Exported Keying Material [RFC5705] of len bytes (must be
 between 16 and 4095 bytes) using label in environment
