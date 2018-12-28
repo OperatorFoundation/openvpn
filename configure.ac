@@ -201,6 +201,13 @@ AC_ARG_ENABLE(
 )
 
 AC_ARG_ENABLE(
+	[plugin-obfs-test],
+	[AS_HELP_STRING([--disable-plugin-obfs-test], [disable obfs-test plugin @<:@default=platform specific@:>@])],
+	,
+	[enable_plugin_obfs_test="no"]
+)
+
+AC_ARG_ENABLE(
 	[pam-dlopen],
 	[AS_HELP_STRING([--enable-pam-dlopen], [dlopen libpam @<:@default=no@:>@])],
 	,
@@ -1344,6 +1351,7 @@ AM_CONDITIONAL([WIN32], [test "${WIN32}" = "yes"])
 AM_CONDITIONAL([GIT_CHECKOUT], [test "${GIT_CHECKOUT}" = "yes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_AUTH_PAM], [test "${enable_plugin_auth_pam}" = "yes"])
 AM_CONDITIONAL([ENABLE_PLUGIN_DOWN_ROOT], [test "${enable_plugin_down_root}" = "yes"])
+AM_CONDITIONAL([ENABLE_PLUGIN_OBFS_TEST], [test "${enable_plugin_obfs_test}" = "yes"])
 AM_CONDITIONAL([HAVE_LD_WRAP_SUPPORT], [test "${have_ld_wrap_support}" = "yes"])
 
 sampledir="\$(docdir)/sample"
@@ -1405,6 +1413,7 @@ AC_CONFIG_FILES([
 	src/plugins/auth-pam/Makefile
 	src/plugins/down-root/Makefile
 	src/tapctl/Makefile
+	src/plugins/obfs-test/Makefile
 	tests/Makefile
         tests/unit_tests/Makefile
         tests/unit_tests/example_test/Makefile

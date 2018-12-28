@@ -12,4 +12,4 @@
 MAINTAINERCLEANFILES = \
 	$(srcdir)/Makefile.in
 
-SUBDIRS = auth-pam down-root
+SUBDIRS = auth-pam down-root obfs-test

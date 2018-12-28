@@ -1,0 +1,26 @@
+obfs-test
+
+SYNOPSIS
+
+The obfs-test plugin is a proof of concept for supporting protocol
+obfuscation for OpenVPN via a socket intercept plugin.
+
+BUILD
+
+You must specify --enable-plugin-obfs-test at configure time to
+trigger building this plugin. It should function on POSIX-y platforms
+and Windows.
+
+USAGE
+
+To invoke this plugin, load it via an appropriate plugin line in the
+configuration file, and then specify 'proto indirect' rather than any
+other protocol. Packets will then be passed via UDP, but they will
+also undergo a very basic content transformation, and the bind port
+will be altered (see obfs-test-munging.c for details).
+
+CAVEATS
+
+This has undergone basic functionality testing, but not any kind of
+full-on stress test. Extended socket or I/O handling options are not
+supported at all.
