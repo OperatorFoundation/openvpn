@@ -34,6 +34,7 @@
 #include "proxy.h"
 #include "socks.h"
 #include "misc.h"
+#include "transport.h"
 
 /*
  * OpenVPN's default port number as assigned by IANA.
@@ -115,6 +116,7 @@ struct link_socket_info
     bool connection_established;
     const char *ipchange_command;
     const struct plugin_list *plugins;
+    const char **transport_plugin_argv;
     bool remote_float;
     int proto;                  /* Protocol (PROTO_x defined below) */
     sa_family_t af;                     /* Address family like AF_INET, AF_INET6 or AF_UNSPEC*/
@@ -173,6 +175,11 @@ struct link_socket
     struct overlapped_io writes;
     struct rw_handle rw_handle;
     struct rw_handle listen_handle; /* For listening on TCP socket in server mode */
+#endif
+
+#ifdef ENABLE_PLUGIN
+    /* only valid when info.proto == PROTO_INDIRECT */
+    openvpn_transport_socket_t indirect;
 #endif
 
     /* used for printing status info only */
@@ -1049,12 +1056,53 @@ int link_socket_read_udp_posix(struct link_socket *sock,
 
 #endif
 
+#ifdef ENABLE_PLUGIN
+
+int link_socket_read_indirect(struct link_socket *sock,
+                              struct buffer *buf,
+                              struct link_socket_actual *from);
+
+int link_socket_write_indirect(struct link_socket *sock,
+                               struct buffer *buf,
+                               struct link_socket_actual *from);
+
+bool proto_is_indirect(int proto);
+
+#else  /* ifdef ENABLE_PLUGIN */
+
+static int
+link_socket_read_indirect(struct link_socket *sock,
+                          struct buffer *buf, struct link_socket_actual *from)
+{
+    return -1;
+}
+
+static int
+link_socket_write_indirect(struct link_socket *sock,
+                           struct buffer *buf, struct link_socket_actual *from)
+{
+    return -1;
+}
+
+static bool
+proto_is_indirect(int proto)
+{
+    return false;
+}
+
+#endif  /* ENABLE_PLUGIN */
+
 /* read a TCP or UDP packet from link */
 static inline int
 link_socket_read(struct link_socket *sock,
                  struct buffer *buf,
                  struct link_socket_actual *from)
 {
+    if (proto_is_indirect(sock->info.proto))
+    {
+        return link_socket_read_indirect(sock, buf, from);
+    }
+
     if (proto_is_udp(sock->info.proto)) /* unified UDPv4 and UDPv6 */
     {
         int res;
@@ -1169,6 +1217,11 @@ link_socket_write(struct link_socket *sock,
                   struct buffer *buf,
                   struct link_socket_actual *to)
 {
+    if (proto_is_indirect(sock->info.proto))
+    {
+        return link_socket_write_indirect(sock, buf, to);
+    }
+
     if (proto_is_udp(sock->info.proto)) /* unified UDPv4 and UDPv6 */
     {
         return link_socket_write_udp(sock, buf, to);
@@ -1263,6 +1316,23 @@ socket_reset_listen_persistent(struct link_socket *s)
     reset_net_event_win32(&s->listen_handle, s->sd);
 #endif
 }
+
+#ifdef ENABLE_PLUGIN
+
+static inline unsigned
+socket_indirect_pump(struct link_socket *s, struct event_set_return *esr, int *esrlen)
+{
+    if (s->indirect)
+    {
+        return transport_pump(s->indirect, esr, esrlen);
+    }
+    else
+    {
+        return 0;
+    }
+}
+
+#endif  /* ENABLE_PLUGIN */
 
 const char *socket_stat(const struct link_socket *s, unsigned int rwflags, struct gc_arena *gc);
 

@@ -27,6 +27,11 @@
 #include "plugin.h"
 #include "openvpn-transport.h"
 
+/* INDIRECT does not have any overhead per se, but it depends on what is
+ * implemented by the transport plugin
+ */
+#define INDIRECT_HEADER_SIZE    0
+
 /* Given a list of plugins and an argument list for a desired
  * transport plugin instance, prepare to bind new link sockets using
  * that transport plugin and args. If all succeeds, return true, and:
