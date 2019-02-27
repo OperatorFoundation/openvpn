@@ -858,11 +858,15 @@ OPENVPN_PLUGIN_DEF int OPENVPN_PLUGIN_FUNC(openvpn_plugin_min_version_required_v
  *
  * This is only used for TRANSPORT plugins presently.  It is called to
  * retrieve a vtable structure to be used for binding virtual sockets
- * which use the transport provided by the plugin. The selector is an
- * OPENVPN_VTAB constant. *size_out must be set to the size of the
- * structure returned.
+ * which use the transport provided by the plugin.
  *
  * REQUIRED: only for TRANSPORT plugins
+ *
+ * ARGUMENTS
+ *
+ * selector : an OPENVPN_VTAB constant
+ *
+ * size_out : must be set to the size of the structure returned.
  *
  * RETURN VALUE
  *
