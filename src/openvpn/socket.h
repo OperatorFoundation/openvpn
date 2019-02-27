@@ -1325,7 +1325,7 @@ socket_indirect_pump(struct link_socket *s, struct event_set_return *esr, int *e
 {
     if (s->indirect)
     {
-        return transport_pump(s->indirect, esr, esrlen);
+        return transport_update_event(s->indirect, esr, esrlen);
     }
     else
     {

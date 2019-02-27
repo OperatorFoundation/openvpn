@@ -65,7 +65,7 @@ transport_bind(const struct plugin_list *plugins,
                struct addrinfo *bind_addresses);
 
 /* Mutates esr/esrlen to consume events. */
-unsigned transport_pump(openvpn_transport_socket_t vsocket,
+unsigned transport_update_event(openvpn_transport_socket_t vsocket,
                         struct event_set_return *esr, int *esrlen);
 
 void transport_request_events(openvpn_transport_socket_t indirect,
