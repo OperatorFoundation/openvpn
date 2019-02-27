@@ -1085,7 +1085,7 @@ link_socket_write_indirect(struct link_socket *sock,
     return -1;
 }
 
-static bool
+static inline bool
 proto_is_indirect(int proto)
 {
     return false;
